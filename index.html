@@ -846,7 +846,7 @@
       <div class="inline-flex items-center gap-3 mb-2"><span class="text-4xl">🎈</span>
        <h1 class="text-3xl font-extrabold bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-400 bg-clip-text text-transparent">The Golden Arcade</h1><span class="text-4xl">🎯</span>
       </div>
-      <p class="text-gray-600 text-lg">Pop the "Main Ideas" but avoid the "Insignificant Details"!</p>
+      <p class="text-gray-600 text-lg">Pop the balloons that help you make a good summary! Avoid the balloons that show what you DON'T want in a summary, like tiny details or fake facts.</p>
      </div>
 
      <!-- Arcade Game Area -->
@@ -864,9 +864,6 @@
       <div class="absolute top-4 left-4 z-40 flex flex-col gap-2">
        <button id="buy-needle-btn" onclick="buyGoldenNeedle()" class="px-4 py-2 bg-yellow-400 text-amber-900 font-bold rounded-xl shadow-md border-b-4 border-yellow-600 hover:scale-105 transition-transform flex items-center gap-2">
         <span>📍</span> Golden Needle (20 💰)
-       </button>
-       <button id="mine-btn" onclick="useBalloonMine()" class="hidden px-4 py-2 bg-red-500 text-white font-bold rounded-xl shadow-md border-b-4 border-red-700 hover:scale-105 transition-transform flex items-center gap-2">
-        <span>💣</span> Balloon Mine!
        </button>
       </div>
 
@@ -1839,6 +1836,7 @@
     let arcadeTimerInterval;
     let spawnInterval;
     let arcadeCoinsEarned = 0;
+    let minesSpawned = 0;
 
     function startArcadeGame() {
       if (isArcadeRunning) return;
@@ -1856,6 +1854,7 @@
       // Reset state
       arcadeScore = 0;
       arcadeTime = 30;
+      minesSpawned = 0;
       isArcadeRunning = true;
       currentSpeed = 6;
       spawnRate = 1200;
@@ -1866,9 +1865,6 @@
       document.getElementById('arcade-game-over').classList.add('hidden');
       document.getElementById('balloon-canvas').innerHTML = '';
       
-      // Setup Mine
-      document.getElementById('mine-btn').classList.remove('hidden');
-
       // Start Loops
       arcadeTimerInterval = setInterval(updateArcadeTimer, 1000);
       spawnInterval = setTimeout(spawnLoop, spawnRate);
@@ -1903,17 +1899,25 @@
 
     const balloonContent = [
       { text: "Main Idea", type: "main", color: "#8b5cf6" },
-      { text: "Beginning, Middle, End", type: "main", color: "#6366f1" },
+      { text: "Beginning, Middle, & End", type: "main", color: "#6366f1" },
       { text: "Accurate Facts", type: "main", color: "#3b82f6" },
-      { text: "The Big Picture", type: "main", color: "#2563eb" },
-      { text: "Squirrel detail", type: "detail", color: "#f59e0b" },
-      { text: "Tiny leaf color", type: "detail", color: "#d97706" },
-      { text: "Insignificant fact", type: "detail", color: "#b45309" },
-      { text: "Wrong date", type: "detail", color: "#ef4444" }
+      { text: "Key Events", type: "main", color: "#2563eb" },
+      { text: "Insignificant Detail", type: "detail", color: "#f59e0b" },
+      { text: "Fake Information", type: "detail", color: "#d97706" },
+      { text: "Out of Order", type: "detail", color: "#b45309" },
+      { text: "Tiny Side Note", type: "detail", color: "#ef4444" }
     ];
 
     function spawnBalloon() {
       const canvas = document.getElementById('balloon-canvas');
+
+      // Mine spawning logic (max 2 per round)
+      if (minesSpawned < 2 && Math.random() < 0.1) {
+          spawnMine(canvas);
+          minesSpawned++;
+          return;
+      }
+
       const content = balloonContent[Math.floor(Math.random() * balloonContent.length)];
       
       const balloon = document.createElement('div');
@@ -1935,6 +1939,59 @@
       setTimeout(() => {
         if (balloon.parentNode) balloon.remove();
       }, duration * 1000);
+    }
+
+    function spawnMine(canvas) {
+      const mine = document.createElement('div');
+      mine.className = 'balloon floating-balloon';
+      mine.dataset.type = 'mine';
+      mine.style.backgroundColor = '#ef4444'; // Red-ish base, but we will style it
+      mine.style.background = 'radial-gradient(circle at 30% 30%, #52525b, #000)'; // Black bomb
+      mine.style.left = Math.random() * (canvas.clientWidth - 80) + 'px';
+      mine.style.fontSize = '3rem';
+
+      const duration = currentSpeed + 1; // Slightly slower maybe? or same
+      mine.style.setProperty('--duration', `${duration}s`);
+
+      mine.innerHTML = '<span>💣</span>';
+
+      canvas.appendChild(mine);
+
+      mine.onclick = (e) => popMine(mine, e);
+
+      setTimeout(() => {
+        if (mine.parentNode) mine.remove();
+      }, duration * 1000);
+    }
+
+    function popMine(mine, event) {
+        if (!isArcadeRunning) return;
+        if (mine.classList.contains('balloon-pop')) return;
+
+        mine.classList.add('balloon-pop');
+
+        // Explosion effect
+        triggerShake();
+        const explosion = document.createElement('div');
+        explosion.className = 'absolute inset-0 bg-white/50 animate-pulse pointer-events-none z-40';
+        document.getElementById('arcade-container').appendChild(explosion);
+        setTimeout(() => explosion.remove(), 500);
+
+        // Pop all balloons
+        const balloons = document.querySelectorAll('.balloon:not(.balloon-pop)');
+        balloons.forEach(b => {
+            if (b === mine) return;
+            // Grant +1 for everything as per requirement "awarding points for each"
+            // We simulate a "Good" pop manually
+            b.classList.add('balloon-pop');
+            b.innerHTML = '<span>✅</span>';
+            arcadeScore++;
+            showFloatingScore(b, 1);
+            setTimeout(() => b.remove(), 300);
+        });
+
+        document.getElementById('arcade-score').textContent = arcadeScore;
+        setTimeout(() => mine.remove(), 300);
     }
 
     function popBalloon(balloon, content, event) {
