@@ -1,0 +1,1960 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Summary Builder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+  <style>
+    body {
+      box-sizing: border-box;
+    }
+    * {
+      font-family: 'Nunito', sans-serif;
+    }
+    .detail-brick {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+    }
+    .detail-brick:hover:not(.selected):not(.checked) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+    }
+    .detail-brick.selected {
+      opacity: 0.5;
+      transform: scale(0.95);
+    }
+    .summary-item {
+      animation: slideIn 0.3s ease-out;
+    }
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    @keyframes bounce {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    .correct {
+      background: linear-gradient(135deg, #10b981, #059669) !important;
+      color: white !important;
+      border-color: #047857 !important;
+    }
+    .incorrect {
+      background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+      color: white !important;
+      border-color: #b91c1c !important;
+    }
+    .story-passage {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border-left: 4px solid #f59e0b;
+    }
+    .summary-box {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      border: 2px dashed #3b82f6;
+    }
+    .confetti {
+      position: fixed;
+      pointer-events: none;
+      z-index: 100;
+    }
+    .option-card {
+      position: relative;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    .option-card:not(.eliminated):hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+    .option-card.eliminated {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .red-x {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 120px;
+      color: #ef4444;
+      font-weight: 900;
+      z-index: 50;
+      animation: xAppear 0.4s ease-out;
+    }
+    @keyframes xAppear {
+      from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.5) rotate(-45deg);
+      }
+      to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1) rotate(0deg);
+      }
+    }
+    .green-glow {
+      animation: glowGlow 0.6s ease-out;
+      background: linear-gradient(135deg, #d1fae5, #a7f3d0) !important;
+      border-color: #10b981 !important;
+    }
+    @keyframes glowGlow {
+      0% {
+        box-shadow: 0 0 0 rgba(16, 185, 129, 0.5);
+      }
+      50% {
+        box-shadow: 0 0 30px rgba(16, 185, 129, 0.8);
+      }
+      100% {
+        box-shadow: 0 0 50px rgba(16, 185, 129, 0.8);
+      }
+    }
+    .step-indicator {
+      display: inline-block;
+      width: 32px;
+      height: 32px;
+      line-height: 32px;
+      text-align: center;
+      background: linear-gradient(135deg, #f59e0b, #f97316);
+      color: white;
+      border-radius: 50%;
+      font-weight: bold;
+      margin-right: 8px;
+    }
+    .page {
+      display: none;
+    }
+    .page.active {
+      display: block;
+    }
+    .page-nav {
+      display: flex;
+      gap: 2px;
+      justify-content: center;
+      margin-top: 2rem;
+    }
+    .page-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #d1d5db;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .page-dot.active {
+      background: #7c3aed;
+      width: 32px;
+      border-radius: 6px;
+    }
+    @keyframes promptPop {
+      0% {
+        transform: scale(0.8);
+        opacity: 0;
+      }
+      50% {
+        transform: scale(1.05);
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+    .prompt-pop {
+      animation: promptPop 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+
+    /* PAGE 3: SORTING GAME STYLES */
+    .sortable-card {
+      background: white;
+      border: 3px solid #3b82f6;
+      border-radius: 1rem;
+      padding: 1.25rem;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .sortable-card:hover:not(.placed) {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+    .sortable-card.dragging {
+      opacity: 0.7;
+      cursor: grabbing;
+      z-index: 1000;
+      box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4);
+    }
+    .sortable-card.placed {
+      cursor: not-allowed;
+      opacity: 0.8;
+    }
+    .sortable-card.placed.correct {
+      background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+      border-color: #10b981;
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+    }
+
+    .sort-bucket {
+      background: linear-gradient(135deg, #f0f9ff, #e0f2fe);
+      border: 3px dashed #0284c7;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      min-height: 200px;
+      transition: all 0.3s ease;
+    }
+    .sort-bucket.drag-over {
+      background: linear-gradient(135deg, #e0f2fe, #cffafe);
+      border-color: #0ea5e9;
+      box-shadow: inset 0 0 20px rgba(6, 182, 212, 0.2);
+      transform: scale(1.02);
+    }
+    .sort-bucket.full {
+      min-height: auto;
+    }
+
+    .bucket-label {
+      font-weight: bold;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      padding: 0.5rem;
+      border-radius: 0.5rem;
+      text-align: center;
+      color: white;
+    }
+
+    .bucket-perfect {
+      border-color: #10b981;
+      background: linear-gradient(135deg, #ecfdf5, #dcfce7);
+    }
+    .bucket-perfect .bucket-label {
+      background: linear-gradient(135deg, #10b981, #059669);
+    }
+
+    .bucket-details {
+      border-color: #f59e0b;
+      background: linear-gradient(135deg, #fffbeb, #fef3c7);
+    }
+    .bucket-details .bucket-label {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+    }
+
+    .bucket-inaccurate {
+      border-color: #ef4444;
+      background: linear-gradient(135deg, #fef2f2, #fee2e2);
+    }
+    .bucket-inaccurate .bucket-label {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+    }
+
+    .bucket-missing {
+      border-color: #8b5cf6;
+      background: linear-gradient(135deg, #faf5ff, #f3e8ff);
+    }
+    .bucket-missing .bucket-label {
+      background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    }
+
+    .bucket-outoforder {
+      border-color: #d946ef;
+      background: linear-gradient(135deg, #fdf2f8, #fce7f3);
+    }
+    .bucket-outoforder .bucket-label {
+      background: linear-gradient(135deg, #d946ef, #c026d3);
+    }
+
+    .cards-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .buckets-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .sort-feedback {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      border-radius: 2rem;
+      font-weight: bold;
+      margin-bottom: 1rem;
+    }
+    .sort-feedback.correct {
+      background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+      color: #166534;
+    }
+    .sort-feedback.incorrect {
+      background: linear-gradient(135deg, #fee2e2, #fecaca);
+      color: #991b1b;
+    }
+
+    .snap-back {
+      animation: snapBack 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes snapBack {
+      0% {
+        transform: scale(0.8);
+        opacity: 0;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .sort-game-complete {
+      text-align: center;
+      padding: 2rem;
+      background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+      border: 3px solid #10b981;
+      border-radius: 1rem;
+      animation: slideIn 0.5s ease-out;
+    }
+
+    /* PAGE 4: SUMMARY DETECTIVE STYLES */
+    .perfect-summary-box {
+      background: linear-gradient(135deg, #fef3c7, #fde68a);
+      border: 4px solid #f59e0b;
+      border-radius: 1.5rem;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 8px 24px rgba(245, 158, 11, 0.3);
+      animation: slideIn 0.5s ease-out;
+    }
+
+    .perfect-summary-box.verified {
+      background: linear-gradient(135deg, #fef08a, #fde047);
+      border: 4px solid #fbbf24;
+      box-shadow: 0 0 30px rgba(251, 191, 36, 0.6);
+    }
+
+    .perfect-summary-title {
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: #92400e;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .perfect-summary-text {
+      font-size: 1.1rem;
+      color: #78350f;
+      line-height: 1.8;
+      font-weight: 500;
+    }
+
+    .verify-zones-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .verify-zone {
+      background: white;
+      border: 3px dashed #3b82f6;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      min-height: 150px;
+      transition: all 0.3s ease;
+      text-align: center;
+    }
+
+    .verify-zone.drag-over {
+      background: #dbeafe;
+      border-color: #0ea5e9;
+      transform: scale(1.05);
+    }
+
+    .verify-zone-label {
+      font-weight: bold;
+      font-size: 0.9rem;
+      color: #3b82f6;
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .verify-zone-content {
+      font-size: 0.95rem;
+      color: #1f2937;
+      line-height: 1.6;
+      min-height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .verify-zone.filled {
+      background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+      border-color: #10b981;
+    }
+
+    .snippet-card {
+      background: white;
+      border: 2px solid #60a5fa;
+      border-radius: 0.75rem;
+      padding: 1rem;
+      cursor: grab;
+      user-select: none;
+      transition: all 0.2s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 0.75rem;
+    }
+
+    .snippet-card:hover:not(.placed) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .snippet-card.dragging {
+      opacity: 0.7;
+      cursor: grabbing;
+      z-index: 1000;
+    }
+
+    .snippet-card.placed {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .red-flag {
+      cursor: pointer;
+      border-bottom: 2px dashed #ef4444;
+      transition: background 0.3s;
+    }
+
+    .red-flag:hover {
+      background-color: #fee2e2;
+    }
+
+    .red-flag.found {
+      background-color: #ef4444;
+      color: white;
+      border-radius: 4px;
+      text-decoration: line-through;
+    }
+
+    .trick-summaries-container {
+      margin-top: 2rem;
+    }
+
+    .trick-summary-card {
+      background: white;
+      border: 3px solid #ef4444;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+    }
+
+    .trick-summary-title {
+      font-weight: bold;
+      font-size: 1rem;
+      color: #991b1b;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .trick-summary-text {
+      font-size: 0.95rem;
+      color: #374151;
+      line-height: 1.7;
+    }
+
+    .trick-summary-card.eliminated {
+      opacity: 0.5;
+      border-color: #d1d5db;
+    }
+
+    .red-flag-explanation {
+      background: linear-gradient(135deg, #fee2e2, #fecaca);
+      border: 3px solid #ef4444;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      margin-top: 1.5rem;
+      animation: slideIn 0.4s ease-out;
+    }
+
+    .red-flag-explanation-title {
+      font-weight: bold;
+      color: #991b1b;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.1rem;
+    }
+
+    .red-flag-explanation-text {
+      color: #7f1d1d;
+      font-size: 1rem;
+      line-height: 1.7;
+    }
+
+    .detective-complete {
+      text-align: center;
+      padding: 2rem;
+      background: linear-gradient(135deg, #dcfce7, #bbf7d0);
+      border: 3px solid #10b981;
+      border-radius: 1rem;
+      animation: slideIn 0.5s ease-out;
+    }
+
+    /* COIN COUNTER & ANIMATION */
+    #coin-cart-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      background: #3f3f46;
+      border: 4px solid #71717a;
+      border-radius: 1rem;
+      padding: 0.5rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    #coin-cart-container.bump {
+      transform: scale(1.2);
+    }
+    .coin-icon {
+      font-size: 2rem;
+    }
+    .coin-count {
+      color: #fbbf24;
+      font-size: 1.5rem;
+      font-weight: 800;
+      text-shadow: 2px 2px 0px rgba(0,0,0,0.5);
+    }
+    .falling-coin {
+      position: fixed;
+      pointer-events: none;
+      z-index: 1100;
+      font-size: 1.5rem;
+      animation: coinRain 1s forwards;
+    }
+    @keyframes coinRain {
+      0% {
+        transform: translateY(-50px) rotate(0deg);
+        opacity: 0;
+      }
+      20% {
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(100vh) rotate(360deg);
+        opacity: 0;
+      }
+    }
+
+    /* ARCADE STYLES */
+    .balloon {
+      position: absolute;
+      width: 80px;
+      height: 100px;
+      border-radius: 50% 50% 50% 50% / 40% 40% 60% 60%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 10px;
+      font-size: 0.7rem;
+      font-weight: bold;
+      color: white;
+      user-select: none;
+      transition: transform 0.1s;
+      box-shadow: inset -10px -10px 20px rgba(0,0,0,0.1);
+    }
+    .balloon::after {
+      content: "";
+      position: absolute;
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 10px solid inherit;
+    }
+    .balloon:hover {
+      filter: brightness(1.1);
+    }
+    .balloon-pop {
+      animation: popOut 0.3s forwards cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes popOut {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(2); opacity: 0; }
+    }
+    @keyframes moveUp {
+      from { bottom: -120px; }
+      to { bottom: 650px; }
+    }
+    .floating-balloon {
+      animation: moveUp var(--duration) linear forwards;
+    }
+    .animate-pop {
+      animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+    @keyframes popIn {
+      0% { transform: scale(0); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full">
+  <!-- Coin Counter -->
+  <div id="coin-cart-container">
+    <span class="coin-icon">🛒</span>
+    <span class="coin-count" id="global-coin-count">0</span>
+    <span class="coin-icon">💰</span>
+  </div>
+
+  <div id="app" class="h-full w-full overflow-auto" style="background: linear-gradient(135deg, #fdf4ff 0%, #f5f3ff 50%, #eff6ff 100%);">
+   <div class="max-w-6xl mx-auto p-6"><!-- Page 1: Summary Builder -->
+    <div id="page-1" class="page active"><!-- Header -->
+     <div class="text-center mb-6">
+      <div class="inline-flex items-center gap-3 mb-2"><span class="text-4xl">📚</span>
+       <h1 id="game-title" class="text-3xl font-extrabold bg-gradient-to-r from-purple-600 via-pink-500 to-orange-400 bg-clip-text text-transparent">Summary Builder</h1><span class="text-4xl">🧱</span>
+      </div>
+      <p id="instruction-text" class="text-gray-600 text-lg">Click the details below that belong in a good summary. Remember, good summaries include information from the beginning, middle, and end of the story, leave out any tiny insignificant details, and include only accurate information.</p>
+     </div><!-- Story Passage -->
+     <div class="story-passage rounded-2xl p-5 mb-6 shadow-lg">
+      <div class="flex items-start gap-3"><span class="text-3xl">📖</span>
+       <div>
+        <h2 class="font-bold text-amber-800 text-lg mb-2">The Mysterious Key</h2>
+        <p class="text-amber-900 leading-relaxed">Maya was walking through the old woods behind her grandmother's house when something shiny caught her eye. She bent down and discovered an ancient brass key half-buried in the fallen leaves. The key had strange symbols carved into it that Maya had never seen before. She picked it up carefully, wondering what door it might open. A squirrel chattered from a nearby oak tree as Maya decided to show her discovery to her grandmother, hoping she might know the key's secret.</p>
+       </div>
+      </div>
+     </div><!-- Detail Bricks -->
+     <div class="mb-6">
+      <h3 class="font-bold text-gray-700 mb-3 flex items-center gap-2"><span class="text-2xl">🧱</span> Story Details - Click to add to your summary:</h3>
+      <div id="bricks-container" class="flex flex-wrap gap-3"><!-- Bricks will be rendered here -->
+      </div>
+     </div><!-- Summary Box -->
+     <div class="summary-box rounded-2xl p-5 mb-6 min-h-32">
+      <h3 class="font-bold text-blue-700 mb-3 flex items-center gap-2"><span class="text-2xl">✏️</span> My Summary:</h3>
+      <div id="summary-container" class="flex flex-wrap gap-2 min-h-16">
+       <p id="empty-message" class="text-blue-400 italic">Click on details above to build your summary...</p>
+      </div>
+     </div><!-- Action Buttons -->
+     <div class="flex justify-center gap-4 mb-6"><button id="check-btn" onclick="checkAnswers()" class="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"> <span>✔️</span> Check My Summary </button> <button id="reset-btn" onclick="resetGame()" class="px-8 py-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center gap-2"> <span>↺</span> Start Over </button>
+     </div><!-- Feedback Area -->
+     <div id="feedback" class="hidden text-center p-4 rounded-2xl mb-4">
+     </div><!-- Score Display -->
+     <div id="score-display" class="hidden text-center">
+      <div class="inline-block bg-white rounded-2xl p-4 shadow-lg">
+       <p class="text-gray-600 mb-1">Your Score</p>
+       <p class="text-3xl font-bold text-purple-600"><span id="score">0</span>/3 Main Ideas Found!</p>
+      </div>
+     </div><!-- Page Navigation -->
+     <div class="page-nav">
+      <div class="page-dot active" onclick="goToPage(1)"></div>
+      <div class="page-dot" onclick="goToPage(2)"></div>
+      <div class="page-dot" onclick="goToPage(3)"></div>
+      <div class="page-dot" onclick="goToPage(4)"></div>
+     </div>
+    </div><!-- Page 2: Process of Elimination -->
+    <div id="page-2" class="page"><!-- Header -->
+     <div class="text-center mb-6">
+      <div class="inline-flex items-center gap-3 mb-2"><span class="text-4xl">🎯</span>
+       <h1 class="text-3xl font-extrabold bg-gradient-to-r from-red-600 via-orange-500 to-amber-400 bg-clip-text text-transparent">Process of Elimination</h1><span class="text-4xl">✕</span>
+      </div>
+      <p class="text-gray-600 text-lg">Learn how to spot and eliminate bad summaries!</p>
+     </div><!-- Story Passage -->
+     <div class="story-passage rounded-2xl p-5 mb-6 shadow-lg">
+      <div class="flex items-start gap-3"><span class="text-3xl">📖</span>
+       <div>
+        <h2 class="font-bold text-amber-800 text-lg mb-2">The Mysterious Key</h2>
+        <p class="text-amber-900 leading-relaxed">Maya was walking through the old woods behind her grandmother's house when something shiny caught her eye. She bent down and discovered an ancient brass key half-buried in the fallen leaves. The key had strange symbols carved into it that Maya had never seen before. She picked it up carefully, wondering what door it might open. A squirrel chattered from a nearby oak tree as Maya decided to show her discovery to her grandmother, hoping she might know the key's secret.</p>
+       </div>
+      </div>
+     </div><!-- Step Prompt -->
+     <div id="step-prompt" class="bg-gradient-to-r from-orange-100 to-amber-100 rounded-2xl p-6 mb-6 border-4 border-orange-500 shadow-lg animate-pulse">
+      <p class="text-2xl font-black text-orange-900 flex items-center gap-3"><span class="step-indicator text-white">1</span> <span id="prompt-text">Cross out the option with too many tiny details.</span></p>
+     </div><!-- Summary Options -->
+     <div id="options-container" class="grid grid-cols-1 gap-4 mb-6"><!-- Options will be rendered here -->
+     </div><!-- Feedback -->
+     <div id="elimination-feedback" class="hidden text-center p-4 rounded-2xl mb-4">
+     </div><!-- Action Buttons -->
+     <div class="flex justify-center gap-4 mb-6"><button id="elimination-reset-btn" onclick="resetElimination()" class="px-8 py-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center gap-2"> <span>↺</span> Start Over </button>
+     </div><!-- Page Navigation -->
+     <div class="page-nav">
+      <div class="page-dot" onclick="goToPage(1)"></div>
+      <div class="page-dot active" onclick="goToPage(2)"></div>
+      <div class="page-dot" onclick="goToPage(3)"></div>
+      <div class="page-dot" onclick="goToPage(4)"></div>
+     </div>
+    </div><!-- Page 3: Categorization Challenge (Sorting) -->
+    <div id="page-3" class="page"><!-- Header -->
+     <div class="text-center mb-6">
+      <div class="inline-flex items-center gap-3 mb-2"><span class="text-4xl">🎮</span>
+       <h1 class="text-3xl font-extrabold bg-gradient-to-r from-indigo-600 via-purple-500 to-pink-400 bg-clip-text text-transparent">Categorization Challenge</h1><span class="text-4xl">🔀</span>
+      </div>
+      <p class="text-gray-600 text-lg">Drag each summary into the correct bucket to categorize why it works or fails!</p>
+     </div><!-- Story Passage -->
+     <div class="story-passage rounded-2xl p-5 mb-6 shadow-lg">
+      <div class="flex items-start gap-3"><span class="text-3xl">📖</span>
+       <div>
+        <h2 class="font-bold text-amber-800 text-lg mb-2">The Mysterious Key</h2>
+        <p class="text-amber-900 leading-relaxed">Maya was walking through the old woods behind her grandmother's house when something shiny caught her eye. She bent down and discovered an ancient brass key half-buried in the fallen leaves. The key had strange symbols carved into it that Maya had never seen before. She picked it up carefully, wondering what door it might open. A squirrel chattered from a nearby oak tree as Maya decided to show her discovery to her grandmother, hoping she might know the key's secret.</p>
+       </div>
+      </div>
+     </div><!-- Instructions -->
+     <div class="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 mb-6">
+      <p class="text-gray-700 font-semibold mb-3">👉 Drag each summary into the correct bucket to categorize why it works or fails!</p>
+      <p class="text-gray-600 text-sm font-semibold mb-2"><span class="text-blue-600">💡 TIP</span> Remember that if the order of the story events is out of order, it is also not the best summary! It must include:</p>
+      <ul class="text-gray-600 text-sm ml-4 space-y-1">
+       <li>✓ Information about the beginning, middle, and end in the <span class="font-bold">CORRECT order</span></li>
+       <li>✓ Leave out any tiny details that don't really matter!</li>
+       <li>✓ Leave out any information that isn't factual to the story.</li>
+      </ul>
+     </div><!-- Sortable Cards -->
+     <div id="sort-feedback" class="hidden sort-feedback mb-4"></div>
+     <div id="cards-container" class="cards-container"><!-- Sortable cards will be rendered here -->
+     </div><!-- Buckets -->
+     <div id="buckets-container" class="buckets-container"><!-- Buckets will be rendered here -->
+     </div><!-- Game Complete Message -->
+     <div id="sort-complete" class="hidden sort-game-complete">
+      <p class="text-3xl mb-3">🎉 Fantastic!</p>
+      <p class="text-xl font-bold text-green-800 mb-4">You sorted all the summaries correctly!</p>
+      <p class="text-gray-700">You're now a summary expert! You know how to recognize perfect summaries and spot the common mistakes.</p>
+     </div><!-- Action Buttons -->
+     <div class="flex justify-center gap-4 mb-6"><button id="sort-reset-btn" onclick="resetSorting()" class="px-8 py-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center gap-2"> <span>↺</span> Start Over </button>
+     </div><!-- Page Navigation -->
+     <div class="page-nav">
+      <div class="page-dot" onclick="goToPage(1)"></div>
+      <div class="page-dot" onclick="goToPage(2)"></div>
+      <div class="page-dot active" onclick="goToPage(3)"></div>
+      <div class="page-dot" onclick="goToPage(4)"></div>
+     </div>
+    </div><!-- Page 4: Summary Detective -->
+    <div id="page-4" class="page"><!-- Header -->
+     <div class="text-center mb-6">
+      <div class="inline-flex items-center gap-3 mb-2"><span class="text-4xl">🔍</span>
+       <h1 class="text-3xl font-extrabold bg-gradient-to-r from-yellow-600 via-amber-500 to-orange-400 bg-clip-text text-transparent">Summary Detective</h1><span class="text-4xl">🕵️</span>
+      </div>
+      <p class="text-gray-600 text-lg">Verify the perfect summary and spot the red flags in the trick summaries!</p>
+     </div><!-- Story Passage -->
+     <div class="story-passage rounded-2xl p-5 mb-6 shadow-lg">
+      <div class="flex items-start gap-3"><span class="text-3xl">📖</span>
+       <div>
+        <h2 class="font-bold text-amber-800 text-lg mb-2">The Mysterious Key</h2>
+        <p class="text-amber-900 leading-relaxed">Maya was walking through the old woods behind her grandmother's house when something shiny caught her eye. She bent down and discovered an ancient brass key half-buried in the fallen leaves. The key had strange symbols carved into it that Maya had never seen before. She picked it up carefully, wondering what door it might open. A squirrel chattered from a nearby oak tree as Maya decided to show her discovery to her grandmother, hoping she might know the key's secret.</p>
+       </div>
+      </div>
+     </div><!-- Perfect Summary Box -->
+     <div id="perfect-summary-box" class="perfect-summary-box">
+      <div class="perfect-summary-title"><span>🌟</span> Perfect Summary
+      </div>
+      <div class="perfect-summary-text">
+       Maya found an ancient brass key with mysterious symbols in the woods behind her grandmother's house and decided to show it to her grandmother.
+      </div>
+     </div><!-- Verify Instructions -->
+     <div class="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 mb-6">
+      <p class="text-gray-700 font-semibold mb-2">👇 Drag the snippets to prove this summary covers the whole story from start to finish.</p>
+      <p class="text-gray-600 text-sm">Match the Beginning, Middle, and End to verify your answer and collect your reward!</p>
+     </div><!-- Snippet Cards (to drag) -->
+     <div id="detective-snippets" class="mb-6"><!-- Snippet cards will be rendered here -->
+     </div><!-- Verify Zones -->
+     <div id="verify-zones" class="verify-zones-container"><!-- Verify zones will be rendered here -->
+     </div><!-- Detective Feedback -->
+     <div id="detective-feedback" class="hidden text-center p-4 rounded-2xl mb-4"></div><!-- Trick Summaries -->
+     <div class="trick-summaries-container">
+      <h3 class="font-bold text-gray-700 mb-4 text-lg flex items-center gap-2"><span class="text-2xl">🚩</span> Now spot the red flags! Click on the errors in these trick summaries:</h3>
+      <div id="trick-summaries" class="mb-6"><!-- Trick summary cards will be rendered here -->
+      </div>
+     </div><!-- Detective Complete Message -->
+     <div id="detective-complete" class="hidden detective-complete">
+      <p class="text-3xl mb-3">🎉 Detective Work Complete!</p>
+      <p class="text-xl font-bold text-green-800 mb-4">You verified the perfect summary and caught all the red flags!</p>
+      <p class="text-gray-700">You're a summary expert! You can identify perfect summaries and spot common errors.</p>
+     </div><!-- Action Buttons -->
+     <div class="flex justify-center gap-4 mb-6">
+      <button id="detective-reset-btn" onclick="resetDetective()" class="px-8 py-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center gap-2"> <span>↺</span> Start Over </button>
+      <button id="arcade-btn" onclick="openArcade()" class="hidden px-8 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center gap-2"> <span>🎮</span> Visit the Arcade </button>
+     </div><!-- Page Navigation -->
+     <div class="page-nav">
+      <div class="page-dot" onclick="goToPage(1)"></div>
+      <div class="page-dot" onclick="goToPage(2)"></div>
+      <div class="page-dot" onclick="goToPage(3)"></div>
+      <div class="page-dot active" onclick="goToPage(4)"></div>
+     </div>
+    </div><!-- Page 5: The Arcade (Balloon Pop) -->
+    <div id="page-5" class="page">
+     <div class="text-center mb-6">
+      <div class="inline-flex items-center gap-3 mb-2"><span class="text-4xl">🎈</span>
+       <h1 class="text-3xl font-extrabold bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-400 bg-clip-text text-transparent">The Golden Arcade</h1><span class="text-4xl">🎯</span>
+      </div>
+      <p class="text-gray-600 text-lg">Pop the "Main Ideas" but avoid the "Insignificant Details"!</p>
+     </div>
+
+     <!-- Arcade Game Area -->
+     <div id="arcade-container" class="relative w-full h-[500px] bg-sky-100 rounded-3xl border-4 border-sky-300 overflow-hidden shadow-inner mb-6">
+      <!-- Game Over Overlay -->
+      <div id="arcade-game-over" class="hidden absolute inset-0 z-50 bg-black/60 backdrop-blur-sm flex flex-center items-center justify-center p-6 text-center">
+       <div class="bg-white rounded-3xl p-8 max-w-sm shadow-2xl animate-pop">
+        <h2 class="text-3xl font-black text-indigo-600 mb-2">Time's Up! ⏰</h2>
+        <p class="text-gray-600 text-lg mb-4">You popped <span id="arcade-final-score" class="font-bold text-2xl text-purple-600">0</span> balloons!</p>
+        <button onclick="resetArcade()" class="w-full px-8 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105"> Play Again (10 💰) </button>
+       </div>
+      </div>
+
+      <!-- Power-ups & Mine -->
+      <div class="absolute top-4 left-4 z-40 flex flex-col gap-2">
+       <button id="buy-needle-btn" onclick="buyGoldenNeedle()" class="px-4 py-2 bg-yellow-400 text-amber-900 font-bold rounded-xl shadow-md border-b-4 border-yellow-600 hover:scale-105 transition-transform flex items-center gap-2">
+        <span>📍</span> Golden Needle (20 💰)
+       </button>
+       <button id="mine-btn" onclick="useBalloonMine()" class="hidden px-4 py-2 bg-red-500 text-white font-bold rounded-xl shadow-md border-b-4 border-red-700 hover:scale-105 transition-transform flex items-center gap-2">
+        <span>💣</span> Balloon Mine!
+       </button>
+      </div>
+
+      <!-- Stats -->
+      <div class="absolute top-4 right-4 z-40 flex flex-col items-end gap-1">
+       <div class="bg-white/80 px-4 py-1 rounded-full font-bold text-blue-600 border border-blue-200">Time: <span id="arcade-timer">30</span>s</div>
+       <div class="bg-white/80 px-4 py-1 rounded-full font-bold text-purple-600 border border-purple-200">Popped: <span id="arcade-score">0</span></div>
+      </div>
+
+      <!-- Start Message -->
+      <div id="arcade-start-overlay" class="absolute inset-0 z-30 flex items-center justify-center">
+        <button onclick="startArcadeGame()" class="px-10 py-5 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-2xl font-black rounded-full shadow-2xl hover:scale-110 transition-transform animate-bounce"> START GAME! </button>
+      </div>
+      
+      <!-- Balloon Container -->
+      <div id="balloon-canvas" class="absolute inset-0"></div>
+     </div>
+
+     <!-- Arcade Navigation -->
+     <div class="flex justify-center gap-4 mb-6">
+      <button onclick="goToPage(4)" class="px-8 py-3 bg-gradient-to-r from-gray-400 to-gray-500 text-white font-bold rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center gap-2"> <span>⬅️</span> Back to Detective </button>
+     </div>
+    </div>
+   </div>
+  </div>
+  <script>
+    const defaultConfig = {
+      game_title: "Summary Builder",
+      instruction_text: "Click the details below that belong in a good summary. Remember, good summaries include information from the beginning, middle, and end of the story, leave out any tiny insignificant details, and include only accurate information.",
+      primary_color: "#9333ea",
+      secondary_color: "#f5f3ff",
+      text_color: "#1f2937",
+      accent_color: "#f59e0b",
+      button_color: "#10b981"
+    };
+
+    const storyDetails = [
+      { id: 1, text: "Maya found an ancient key in the woods", isMain: true },
+      { id: 2, text: "The key had mysterious symbols on it", isMain: true },
+      { id: 3, text: "Maya decided to show it to her grandmother", isMain: true },
+      { id: 4, text: "A squirrel was chattering in a tree", isMain: false },
+      { id: 5, text: "The woods were behind her grandmother's house", isMain: false },
+      { id: 6, text: "The key was half-buried in leaves", isMain: false }
+    ];
+
+    const summaryOptions = [
+      {
+        id: 'A',
+        text: 'Maya found an ancient brass key with mysterious symbols in the woods behind her grandmother\'s house and decided to show it to her grandmother.',
+        reason: 'correct',
+        description: 'This is the correct answer! It includes the beginning (found the key), middle (description of key), and end (shows grandmother).'
+      },
+      {
+        id: 'B',
+        text: 'Maya found a key in the woods. The key had symbols on it. A squirrel chattered in a nearby oak tree. The key was half-buried in leaves.',
+        reason: 'tooManyDetails',
+        description: 'This has too many tiny details! The squirrel and the exact burial position aren\'t important to the main story.'
+      },
+      {
+        id: 'C',
+        text: 'Maya discovered a key made of silver with strange symbols behind her grandmother\'s house and decided to keep it as a souvenir.',
+        reason: 'inaccurate',
+        description: 'This has inaccurate facts! The key was brass, not silver. And the story doesn\'t say she decided to keep it—she decided to show it to her grandmother!'
+      },
+      {
+        id: 'D',
+        text: 'Maya found a mysterious key and decided to explore the forest to find what door it opened.',
+        reason: 'missingParts',
+        description: 'This is incomplete! It\'s missing where she found the key and doesn\'t mention showing it to grandmother. It doesn\'t include the full beginning, middle, and end.'
+      }
+    ];
+
+    const sortingData = [
+      { id: 'sort-1', text: 'Maya found an ancient brass key with mysterious symbols in the woods behind her grandmother\'s house and decided to show it to her grandmother.', category: 'perfect' },
+      { id: 'sort-2', text: 'Maya found a key in the woods. The key had symbols on it. A squirrel chattered in a nearby oak tree. The key was half-buried in leaves.', category: 'details' },
+      { id: 'sort-3', text: 'Maya discovered a key made of silver with strange symbols behind her grandmother\'s house and decided to keep it as a souvenir.', category: 'inaccurate' },
+      { id: 'sort-4', text: 'Maya decided to show her grandmother the key. She found an ancient brass key with mysterious symbols in the woods behind her grandmother\'s house.', category: 'outoforder' },
+      { id: 'sort-5', text: 'Maya found a mysterious key in the woods but didn\'t know where it came from.', category: 'missing' }
+    ];
+
+    let selectedDetails = [];
+    let isChecked = false;
+    let currentPage = 1;
+
+    // Elimination game state
+    let eliminationStep = 1;
+    let eliminationAnswers = {};
+    let eliminationComplete = false;
+
+    // Sorting game state
+    let placedCards = new Set();
+
+    // Global State
+    let coins = 0;
+
+    // Detective game state
+    let detectedRedFlags = new Set();
+    let placedSnippets = new Set();
+    let summaryVerified = false;
+
+    function addCoins(amount) {
+      coins += amount;
+      updateCoinDisplay();
+      triggerCoinRain();
+      
+      const cart = document.getElementById('coin-cart-container');
+      cart.classList.add('bump');
+      setTimeout(() => cart.classList.remove('bump'), 200);
+    }
+
+    function updateCoinDisplay() {
+      document.getElementById('global-coin-count').textContent = coins;
+    }
+
+    function triggerCoinRain() {
+      for (let i = 0; i < 10; i++) {
+        setTimeout(() => {
+          const coin = document.createElement('div');
+          coin.className = 'falling-coin';
+          coin.innerHTML = '🪙';
+          coin.style.left = (Math.random() * 80 + 10) + 'vw';
+          coin.style.animationDuration = (0.5 + Math.random() * 0.5) + 's';
+          document.body.appendChild(coin);
+          
+          setTimeout(() => coin.remove(), 1000);
+        }, i * 50);
+      }
+    }
+
+    const detectionData = [
+      {
+        id: 'trick-B',
+        title: '❌ Trick Summary B - Too Many Details',
+        fullText: 'Maya found a key in the woods. The key had symbols on it. <span class="red-flag" data-flag-id="squirrel-detail" onclick="flagRedError(event, \'squirrel-detail\')">A squirrel chattered in a nearby oak tree.</span> The key was half-buried in leaves.',
+        redFlags: [
+          { flagId: 'squirrel-detail', text: 'A squirrel chattered in a nearby oak tree.', explanation: '🚩 The squirrel is a tiny detail that doesn\'t matter to the main story. Good summaries leave out insignificant details!' }
+        ]
+      },
+      {
+        id: 'trick-C',
+        title: '❌ Trick Summary C - Inaccurate Info',
+        fullText: 'Maya discovered a key made of <span class="red-flag" data-flag-id="silver-key" onclick="flagRedError(event, \'silver-key\')">silver</span> with strange symbols behind her grandmother\'s house and decided to <span class="red-flag" data-flag-id="keep-key" onclick="flagRedError(event, \'keep-key\')">keep it as a souvenir.</span>',
+        redFlags: [
+          { flagId: 'silver-key', text: 'silver', explanation: '🚩 The story says the key was BRASS, not silver! This is inaccurate information.' },
+          { flagId: 'keep-key', text: 'keep it as a souvenir.', explanation: '🚩 The story says Maya decided to SHOW it to her grandmother, not keep it! This misses the real ending.' }
+        ]
+      },
+      {
+        id: 'trick-D',
+        title: '❌ Trick Summary D - Missing Beginning, Middle, End',
+        fullText: 'Maya found a mysterious key and <span class="red-flag" data-flag-id="incomplete-journey" onclick="flagRedError(event, \'incomplete-journey\')">decided to explore the forest to find what door it opened.</span>',
+        redFlags: [
+          { flagId: 'incomplete-journey', text: 'decided to explore the forest to find what door it opened.', explanation: '🚩 This skips important details like WHERE she found the key and doesn\'t mention showing it to her grandmother. The summary is incomplete!' }
+        ]
+      }
+    ];
+
+    const snippetDataOriginal = [
+      { id: 'snippet-found', text: 'Maya found an ancient brass key', zone: 'beginning', order: 1 },
+      { id: 'snippet-details', text: 'with mysterious symbols in the woods behind her grandmother\'s house', zone: 'middle', order: 2 },
+      { id: 'snippet-action', text: 'and decided to show it to her grandmother', zone: 'end', order: 3 }
+    ];
+
+    let snippetData = [...snippetDataOriginal];
+
+    const zones = [
+      { id: 'zone-beginning', label: 'Beginning', zone: 'beginning' },
+      { id: 'zone-middle', label: 'Middle', zone: 'middle' },
+      { id: 'zone-end', label: 'End', zone: 'end' }
+    ];
+
+    // --- UPDATED DRAG-SCROLL LOGIC ---
+    let dragScrollInterval = null;
+    const SCROLL_THRESHOLD = 100; 
+    const SCROLL_SPEED = 15;
+    const scrollContainer = document.getElementById('app');
+
+    document.addEventListener('dragover', (e) => {
+      if (currentPage !== 3) return;
+
+      const rect = scrollContainer.getBoundingClientRect();
+      const mouseY = e.clientY;
+
+      // Clear previous interval to prevent "speed stacking"
+      clearInterval(dragScrollInterval);
+
+      if (mouseY < rect.top + SCROLL_THRESHOLD) {
+        // Scroll Up
+        dragScrollInterval = setInterval(() => {
+          scrollContainer.scrollBy(0, -SCROLL_SPEED);
+        }, 16);
+      } else if (mouseY > rect.bottom - SCROLL_THRESHOLD) {
+        // Scroll Down
+        dragScrollInterval = setInterval(() => {
+          scrollContainer.scrollBy(0, SCROLL_SPEED);
+        }, 16);
+      } else {
+        clearInterval(dragScrollInterval);
+      }
+    });
+
+    document.addEventListener('dragend', () => {
+      clearInterval(dragScrollInterval);
+    });
+
+    function renderSortingGame() {
+      const cardsContainer = document.getElementById('cards-container');
+      const bucketsContainer = document.getElementById('buckets-container');
+      cardsContainer.innerHTML = '';
+      bucketsContainer.innerHTML = '';
+
+      const perfectBucket = { id: 'perfect', label: 'Perfect Summary', class: 'bucket-perfect' };
+      const otherBuckets = [
+        { id: 'details', label: 'Extra Details', class: 'bucket-details' },
+        { id: 'inaccurate', label: 'Inaccurate Info', class: 'bucket-inaccurate' },
+        { id: 'missing', label: 'Missing B-M-E', class: 'bucket-missing' },
+        { id: 'outoforder', label: 'Out of Order', class: 'bucket-outoforder' }
+      ];
+
+      for (let i = otherBuckets.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [otherBuckets[i], otherBuckets[j]] = [otherBuckets[j], otherBuckets[i]];
+      }
+
+      const categories = [perfectBucket, ...otherBuckets];
+
+      categories.forEach(cat => {
+        const bucket = document.createElement('div');
+        bucket.id = `bucket-${cat.id}`;
+        bucket.className = `sort-bucket ${cat.class}`;
+        bucket.ondragover = (e) => e.preventDefault(); 
+        bucket.ondrop = (e) => handleDrop(e, cat.id);
+        bucket.innerHTML = `<div class="bucket-label">${cat.label}</div>`;
+        bucketsContainer.appendChild(bucket);
+      });
+
+      sortingData.forEach(item => {
+        if (placedCards.has(item.id)) return;
+        
+        const card = document.createElement('div');
+        card.id = item.id;
+        card.className = 'sortable-card';
+        card.draggable = true;
+        card.innerText = item.text;
+        card.dataset.category = item.category;
+
+        card.ondragstart = (e) => {
+          e.dataTransfer.setData("text", e.target.id);
+          e.target.classList.add('dragging');
+        };
+        
+        card.ondragend = (e) => {
+          e.target.classList.remove('dragging');
+          clearInterval(dragScrollInterval); 
+        };
+        cardsContainer.appendChild(card);
+      });
+    }
+
+    function handleDrop(event, bucketCategory) {
+      event.preventDefault();
+      const cardId = event.dataTransfer.getData("text");
+      const card = document.getElementById(cardId);
+      const correctCategory = card.dataset.category;
+
+      if (bucketCategory === correctCategory) {
+        addCoins(5);
+        // This is the "Sticking" Logic
+        const targetBucket = document.getElementById(`bucket-${bucketCategory}`);
+        targetBucket.appendChild(card); // Physically moves the element
+        
+        card.classList.add('placed', 'correct');
+        card.draggable = false;
+        placedCards.add(cardId);
+        
+        showSortFeedback("✓ Correct! That's where it belongs.", "success");
+        checkSortingComplete();
+      } else {
+        // Feedback for wrong bucket
+        showSortFeedback("✕ Not quite. Try a different bucket!", "incorrect");
+        card.classList.add('snap-back');
+        setTimeout(() => card.classList.remove('snap-back'), 400);
+      }
+    }
+
+    function showSortFeedback(text, type) {
+      const fb = document.getElementById('sort-feedback');
+      fb.innerText = text;
+      fb.className = `sort-feedback ${type}`;
+      fb.classList.remove('hidden');
+    }
+
+    function checkSortingComplete() {
+      if (placedCards.size === sortingData.length) {
+        document.getElementById('sort-complete').classList.remove('hidden');
+        document.getElementById('cards-container').classList.add('hidden');
+      }
+    }
+
+    function resetSorting() {
+      placedCards.clear();
+      document.getElementById('sort-complete').classList.add('hidden');
+      document.getElementById('cards-container').classList.remove('hidden');
+      document.getElementById('sort-feedback').classList.add('hidden');
+      renderSortingGame();
+    }
+
+    function shuffleArray(array) {
+      const shuffled = [...array];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    }
+
+    let shuffledDetails = shuffleArray(storyDetails);
+
+    // PAGE NAVIGATION
+    function openArcade() {
+      if (coins < 10) {
+        showDetectiveFeedback("You need at least 10 gold to play in the arcade!", "incorrect");
+        return;
+      }
+      goToPage(5);
+    }
+
+    function goToPage(page) {
+      currentPage = page;
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById(`page-${page}`).classList.add('active');
+      
+      document.querySelectorAll('.page-dot').forEach((dot, index) => {
+        dot.classList.toggle('active', index + 1 === page);
+      });
+
+      if (page === 2) {
+        renderEliminationOptions();
+      } else if (page === 3) {
+        renderSortingGame();
+      } else if (page === 4) {
+        renderDetectiveGame();
+      }
+    }
+
+    // PAGE 1: SUMMARY BUILDER
+    function renderBricks() {
+      const container = document.getElementById('bricks-container');
+      container.innerHTML = '';
+      
+      shuffledDetails.forEach(detail => {
+        const isSelected = selectedDetails.some(d => d.id === detail.id);
+        const brick = document.createElement('button');
+        brick.className = `detail-brick px-4 py-2 rounded-xl font-semibold text-sm border-2 ${
+          isSelected ? 'selected bg-gray-200 border-gray-300 text-gray-400' : 
+          'bg-white border-purple-200 text-gray-700 hover:border-purple-400'
+        }`;
+        brick.setAttribute('data-id', detail.id);
+        brick.textContent = detail.text;
+        brick.onclick = () => toggleDetail(detail);
+        
+        if (isChecked) {
+          brick.classList.add(detail.isMain ? 'correct' : 'incorrect');
+          brick.classList.remove('selected');
+        }
+        
+        container.appendChild(brick);
+      });
+    }
+
+    function renderSummary() {
+      const container = document.getElementById('summary-container');
+      const emptyMessage = document.getElementById('empty-message');
+      
+      if (selectedDetails.length === 0) {
+        emptyMessage.classList.remove('hidden');
+        container.querySelectorAll('.summary-item').forEach(el => el.remove());
+        return;
+      }
+      
+      emptyMessage.classList.add('hidden');
+      
+      const existingIds = Array.from(container.querySelectorAll('.summary-item')).map(el => parseInt(el.dataset.id));
+      const selectedIds = selectedDetails.map(d => d.id);
+      
+      existingIds.forEach(id => {
+        if (!selectedIds.includes(id)) {
+          const el = container.querySelector(`[data-id="${id}"]`);
+          if (el) el.remove();
+        }
+      });
+      
+      selectedDetails.forEach(detail => {
+        if (!existingIds.includes(detail.id)) {
+          const item = document.createElement('span');
+          item.className = `summary-item inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-sm ${
+            isChecked ? (detail.isMain ? 'correct' : 'incorrect') : 'bg-white border border-blue-300 text-blue-800'
+          }`;
+          item.setAttribute('data-id', detail.id);
+          item.innerHTML = `
+            ${detail.text}
+            ${!isChecked ? `<button onclick="removeDetail(${detail.id})" class="text-blue-400 hover:text-blue-600 ml-1">✕</button>` : ''}
+          `;
+          container.appendChild(item);
+        } else if (isChecked) {
+          const item = container.querySelector(`[data-id="${detail.id}"]`);
+          if (item) {
+            item.className = `summary-item inline-flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-sm ${detail.isMain ? 'correct' : 'incorrect'}`;
+            item.innerHTML = detail.text;
+          }
+        }
+      });
+    }
+
+    function toggleDetail(detail) {
+      if (isChecked) return;
+      
+      const index = selectedDetails.findIndex(d => d.id === detail.id);
+      if (index === -1) {
+        selectedDetails.push(detail);
+      } else {
+        selectedDetails.splice(index, 1);
+      }
+      
+      renderBricks();
+      renderSummary();
+    }
+
+    function removeDetail(id) {
+      if (isChecked) return;
+      selectedDetails = selectedDetails.filter(d => d.id !== id);
+      renderBricks();
+      renderSummary();
+    }
+
+    function checkAnswers() {
+      if (selectedDetails.length === 0) {
+        showFeedback("Please select some details first!", "warning");
+        return;
+      }
+      
+      isChecked = true;
+      renderBricks();
+      renderSummary();
+      
+      const correctCount = selectedDetails.filter(d => d.isMain).length;
+      const incorrectCount = selectedDetails.filter(d => !d.isMain).length;
+      
+      document.getElementById('score').textContent = correctCount;
+      document.getElementById('score-display').classList.remove('hidden');
+      
+      if (correctCount > 0) {
+        addCoins(correctCount * 5);
+      }
+      
+      if (correctCount === 3 && incorrectCount === 0) {
+        showFeedback("🎉 Perfect! You identified all the main ideas!", "success");
+        createConfetti();
+      } else if (correctCount === 3) {
+        showFeedback("👍 Great job finding the main ideas! But you included some minor details too.", "partial");
+      } else if (correctCount >= 2) {
+        showFeedback("👏 Good start! You found some main ideas. Green = main ideas, Red = minor details.", "partial");
+      } else {
+        showFeedback("😔 Keep practicing! Green shows main ideas, Red shows minor details.", "info");
+      }
+      
+      document.getElementById('check-btn').disabled = true;
+    }
+
+    function showFeedback(message, type) {
+      const feedback = document.getElementById('feedback');
+      feedback.classList.remove('hidden');
+      
+      const colors = {
+        success: 'bg-green-100 border-2 border-green-400 text-green-800',
+        warning: 'bg-yellow-100 border-2 border-yellow-400 text-yellow-800',
+        partial: 'bg-blue-100 border-2 border-blue-400 text-blue-800',
+        info: 'bg-purple-100 border-2 border-purple-400 text-purple-800'
+      };
+      
+      feedback.className = `text-center p-4 rounded-2xl mb-4 font-semibold ${colors[type]}`;
+      feedback.textContent = message;
+    }
+
+    function createConfetti() {
+      const colors = ['#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6'];
+      for (let i = 0; i < 50; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.left = Math.random() * 100 + 'vw';
+        confetti.style.top = '-10px';
+        confetti.style.width = '10px';
+        confetti.style.height = '10px';
+        confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
+        confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+        document.body.appendChild(confetti);
+        
+        const animation = confetti.animate([
+          { top: '-10px', opacity: 1 },
+          { top: '100%', opacity: 0 }
+        ], {
+          duration: 2000 + Math.random() * 1000,
+          easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+        });
+        
+        animation.onfinish = () => confetti.remove();
+      }
+    }
+
+    function resetGame() {
+      selectedDetails = [];
+      isChecked = false;
+      shuffledDetails = shuffleArray(storyDetails);
+      
+      document.getElementById('feedback').classList.add('hidden');
+      document.getElementById('score-display').classList.add('hidden');
+      document.getElementById('check-btn').disabled = false;
+      
+      renderBricks();
+      renderSummary();
+    }
+
+    function applyConfig(config) {
+      document.getElementById('game-title').textContent = config.game_title || defaultConfig.game_title;
+      document.getElementById('instruction-text').textContent = config.instruction_text || defaultConfig.instruction_text;
+    }
+
+    // PAGE 2: ELIMINATION GAME
+    let shuffledSummaryOptions = shuffleArray(summaryOptions);
+
+    function renderEliminationOptions() {
+      const container = document.getElementById('options-container');
+      container.innerHTML = '';
+      
+      shuffledSummaryOptions.forEach(option => {
+        const isEliminated = eliminationAnswers[option.id];
+        const optionCard = document.createElement('div');
+        optionCard.className = `option-card bg-white rounded-2xl p-5 border-3 ${
+          isEliminated ? 'eliminated border-gray-300' : 'border-blue-300'
+        }`;
+        optionCard.onclick = () => handleOptionClick(option);
+        
+        optionCard.innerHTML = `
+          <div class="flex items-start gap-3">
+            <div class="font-bold text-2xl text-blue-600 mt-2">${option.id}.</div>
+            <div class="flex-1">
+              <p class="text-gray-800 text-lg leading-relaxed mb-2">${option.text}</p>
+            </div>
+            ${isEliminated ? '<div class="red-x">✕</div>' : ''}
+          </div>
+        `;
+        
+        container.appendChild(optionCard);
+      });
+    }
+
+    let feedbackLocked = false;
+
+    function handleOptionClick(option) {
+      if (eliminationComplete) return;
+      
+      if (eliminationAnswers[option.id]) {
+        showEliminationFeedback('Already eliminated!', 'warning');
+        return;
+      }
+
+      const expectedAnswer = summaryOptions.find(o => o.reason === getExpectedReason(eliminationStep));
+      
+      if (option.id === expectedAnswer.id) {
+        addCoins(5);
+        eliminationAnswers[option.id] = true;
+        renderEliminationOptions();
+        
+        if (eliminationStep === 1) {
+          showEliminationFeedback('✓ Correct! That summary had too many tiny details like the squirrel and where it was buried.', 'success');
+          feedbackLocked = true;
+          // Advance to next step while keeping feedback visible
+          eliminationStep = 2;
+          updateEliminationPrompt();
+        } else if (eliminationStep === 2) {
+          showEliminationFeedback('✓ Correct! That summary was missing the complete story—it didn\'t have the beginning, middle, and end.', 'success');
+          feedbackLocked = true;
+          // Advance to next step while keeping feedback visible
+          eliminationStep = 3;
+          updateEliminationPrompt();
+        } else if (eliminationStep === 3) {
+          showEliminationFeedback('🎉 You eliminated all the bad summaries! Option A is the best summary!', 'perfect');
+          highlightCorrectAnswer();
+          eliminationComplete = true;
+          createConfetti();
+        }
+      } else {
+        showEliminationFeedback('✗ Not quite. Try another option!', 'error');
+      }
+    }
+
+    function getExpectedReason(step) {
+      if (step === 1) return 'tooManyDetails';
+      if (step === 2) return 'missingParts';
+      if (step === 3) return 'inaccurate';
+    }
+
+    function updateEliminationPrompt() {
+      const prompts = [
+        'Cross out the option with too many tiny details.',
+        'Now eliminate the one missing the beginning, middle, or end.',
+        'Eliminate the choice with inaccurate facts.'
+      ];
+
+      const backgroundGradients = [
+        'from-orange-100 to-amber-100',
+        'from-blue-100 to-cyan-100',
+        'from-red-100 to-rose-100'
+      ];
+      
+      const promptDiv = document.getElementById('step-prompt');
+      
+      promptDiv.classList.remove('from-orange-100', 'to-amber-100', 'from-blue-100', 'to-cyan-100', 'from-red-100', 'to-rose-100');
+      promptDiv.classList.remove('prompt-pop');
+      
+      promptDiv.classList.add(backgroundGradients[eliminationStep - 1].split(' ')[0], backgroundGradients[eliminationStep - 1].split(' ')[1]);
+      
+      void promptDiv.offsetWidth;
+      
+      promptDiv.classList.add('prompt-pop');
+      document.querySelector('.step-indicator').textContent = eliminationStep;
+      document.getElementById('prompt-text').textContent = prompts[eliminationStep - 1];
+    }
+
+    function showEliminationFeedback(message, type) {
+      const feedback = document.getElementById('elimination-feedback');
+      feedback.classList.remove('hidden');
+      
+      const colors = {
+        success: 'bg-green-100 border-2 border-green-400 text-green-800',
+        error: 'bg-red-100 border-2 border-red-400 text-red-800',
+        warning: 'bg-yellow-100 border-2 border-yellow-400 text-yellow-800',
+        perfect: 'bg-green-100 border-2 border-green-400 text-green-800'
+      };
+      
+      feedback.className = `text-center p-4 rounded-2xl mb-4 font-semibold ${colors[type]}`;
+      feedback.textContent = message;
+    }
+
+    function highlightCorrectAnswer() {
+      const container = document.getElementById('options-container');
+      const cards = container.querySelectorAll('.option-card');
+      cards.forEach(card => {
+        if (!card.classList.contains('eliminated')) {
+          card.classList.add('green-glow');
+        }
+      });
+    }
+
+    function resetElimination() {
+      eliminationStep = 1;
+      eliminationAnswers = {};
+      eliminationComplete = false;
+      shuffledSummaryOptions = shuffleArray(summaryOptions);
+      document.getElementById('elimination-feedback').classList.add('hidden');
+      updateEliminationPrompt();
+      renderEliminationOptions();
+    }
+
+    // PAGE 4: DETECTIVE GAME
+    function renderDetectiveGame() {
+      // Shuffle snippets on each render
+      snippetData = shuffleArray([...snippetDataOriginal]);
+      renderSnippetCards();
+      renderVerifyZones();
+      renderTrickSummaries();
+    }
+
+    function renderSnippetCards() {
+      const container = document.getElementById('detective-snippets');
+      container.innerHTML = '';
+      
+      snippetData.forEach(snippet => {
+        if (placedSnippets.has(snippet.id)) return;
+        
+        const card = document.createElement('div');
+        card.id = snippet.id;
+        card.className = 'snippet-card';
+        card.draggable = true;
+        card.innerText = snippet.text;
+        card.dataset.zone = snippet.zone;
+
+        card.ondragstart = (e) => {
+          e.dataTransfer.setData("text", e.target.id);
+          e.target.classList.add('dragging');
+        };
+
+        card.ondragend = (e) => {
+          e.target.classList.remove('dragging');
+        };
+
+        container.appendChild(card);
+      });
+    }
+
+    function renderVerifyZones() {
+      const container = document.getElementById('verify-zones');
+      container.innerHTML = '';
+
+      zones.forEach(zone => {
+        const zoneEl = document.createElement('div');
+        zoneEl.id = zone.id;
+        zoneEl.className = 'verify-zone';
+        zoneEl.ondragover = (e) => {
+          e.preventDefault();
+          zoneEl.classList.add('drag-over');
+        };
+        zoneEl.ondragleave = () => {
+          zoneEl.classList.remove('drag-over');
+        };
+        zoneEl.ondrop = (e) => handleDetectiveDrop(e, zone.zone);
+
+        const label = document.createElement('div');
+        label.className = 'verify-zone-label';
+        label.textContent = zone.label;
+
+        const content = document.createElement('div');
+        content.className = 'verify-zone-content';
+        content.id = `zone-content-${zone.zone}`;
+        content.textContent = 'Drop snippet here...';
+
+        zoneEl.appendChild(label);
+        zoneEl.appendChild(content);
+        container.appendChild(zoneEl);
+      });
+    }
+
+    function handleDetectiveDrop(event, zoneType) {
+      event.preventDefault();
+      event.target.closest('.verify-zone').classList.remove('drag-over');
+
+      const snippetId = event.dataTransfer.getData("text");
+      const snippet = snippetData.find(s => s.id === snippetId);
+
+      if (snippet.zone === zoneType) {
+        addCoins(5);
+        const card = document.getElementById(snippetId);
+        const contentZone = document.getElementById(`zone-content-${zoneType}`);
+
+        card.classList.add('placed');
+        card.draggable = false;
+        placedSnippets.add(snippetId);
+
+        contentZone.innerHTML = snippet.text;
+        contentZone.style.color = '#10b981';
+        contentZone.style.fontWeight = 'bold';
+
+        event.target.closest('.verify-zone').classList.add('filled');
+        renderSnippetCards();
+        checkDetectiveVerification();
+      } else {
+        showDetectiveFeedback('✕ That snippet belongs in a different zone!', 'incorrect');
+      }
+    }
+
+    function checkDetectiveVerification() {
+      if (placedSnippets.size === snippetData.length) {
+        summaryVerified = true;
+        document.getElementById('perfect-summary-box').classList.add('verified');
+        showDetectiveFeedback('✓ Perfect! The summary is verified! Now find all the red flags below.', 'success');
+        checkAllRedFlagsFound();
+      }
+    }
+
+    function renderTrickSummaries() {
+      const container = document.getElementById('trick-summaries');
+      container.innerHTML = '';
+
+      detectionData.forEach(trick => {
+        const card = document.createElement('div');
+        card.id = trick.id;
+        card.className = 'trick-summary-card';
+
+        const title = document.createElement('div');
+        title.className = 'trick-summary-title';
+        title.textContent = trick.title;
+
+        const text = document.createElement('div');
+        text.className = 'trick-summary-text';
+        text.innerHTML = trick.fullText;
+
+        card.appendChild(title);
+        card.appendChild(text);
+        container.appendChild(card);
+      });
+    }
+
+    function flagRedError(event, flagId) {
+      event.stopPropagation();
+      const flagElement = event.target;
+
+      if (!flagElement.classList.contains('found')) {
+        addCoins(5);
+        flagElement.classList.add('found');
+        detectedRedFlags.add(flagId);
+        
+        // Find the explanation for this flag
+        let explanation = '';
+        for (let trick of detectionData) {
+          for (let flag of trick.redFlags) {
+            if (flag.flagId === flagId) {
+              explanation = flag.explanation;
+              break;
+            }
+          }
+          if (explanation) break;
+        }
+        
+        // Show the explanation
+        showRedFlagExplanation(explanation);
+        checkAllRedFlagsFound();
+      }
+    }
+
+    function showRedFlagExplanation(explanation) {
+      // Remove any existing explanation
+      const existingExplanation = document.getElementById('red-flag-explanation-box');
+      if (existingExplanation) {
+        existingExplanation.remove();
+      }
+
+      // Create new explanation box
+      const explanationBox = document.createElement('div');
+      explanationBox.id = 'red-flag-explanation-box';
+      explanationBox.className = 'red-flag-explanation';
+      explanationBox.innerHTML = `
+        <div class="red-flag-explanation-text">${explanation}</div>
+      `;
+
+      // Insert after the trick summaries container
+      const trickSummariesContainer = document.getElementById('trick-summaries');
+      trickSummariesContainer.parentNode.insertBefore(explanationBox, trickSummariesContainer.nextSibling);
+    }
+
+    function checkAllRedFlagsFound() {
+      const totalRedFlags = detectionData.reduce((sum, trick) => {
+        return sum + (trick.redFlags ? trick.redFlags.length : 0);
+      }, 0);
+
+      if (detectedRedFlags.size === totalRedFlags && summaryVerified) {
+        document.getElementById('detective-complete').classList.remove('hidden');
+        document.getElementById('arcade-btn').classList.remove('hidden');
+        document.getElementById('trick-summaries').classList.add('opacity-60');
+        createConfetti();
+        showDetectiveFeedback('🎉 Amazing detective work! You caught all the red flags!', 'success');
+      }
+    }
+
+    function showDetectiveFeedback(message, type) {
+      const feedback = document.getElementById('detective-feedback');
+      feedback.classList.remove('hidden');
+
+      const colors = {
+        success: 'bg-green-100 border-2 border-green-400 text-green-800',
+        incorrect: 'bg-red-100 border-2 border-red-400 text-red-800'
+      };
+
+      feedback.className = `text-center p-4 rounded-2xl mb-4 font-semibold ${colors[type]}`;
+      feedback.textContent = message;
+    }
+
+    function resetDetective() {
+      detectedRedFlags.clear();
+      placedSnippets.clear();
+      summaryVerified = false;
+      snippetData = [...snippetDataOriginal];
+      document.getElementById('perfect-summary-box').classList.remove('verified');
+      document.getElementById('detective-complete').classList.add('hidden');
+      document.getElementById('arcade-btn').classList.add('hidden');
+      document.getElementById('trick-summaries').classList.remove('opacity-60');
+      document.getElementById('detective-feedback').classList.add('hidden');
+
+      // Remove explanation box
+      const explanationBox = document.getElementById('red-flag-explanation-box');
+      if (explanationBox) {
+        explanationBox.remove();
+      }
+
+      document.querySelectorAll('.red-flag.found').forEach(flag => {
+        flag.classList.remove('found');
+      });
+
+      renderDetectiveGame();
+    }
+
+    // --- ARCADE LOGIC ---
+    let arcadeScore = 0;
+    let arcadeTime = 30;
+    let isArcadeRunning = false;
+    let hasGoldenNeedle = false;
+    let currentSpeed = 6; // seconds
+    let spawnRate = 1200; // ms
+    let arcadeTimerInterval;
+    let spawnInterval;
+    let arcadeCoinsEarned = 0;
+
+    function startArcadeGame() {
+      if (isArcadeRunning) return;
+      
+      // Pay to play
+      if (coins < 10) {
+        showDetectiveFeedback("You need 10 gold to play!", "incorrect");
+        return;
+      }
+      coins -= 10;
+      updateCoinDisplay();
+
+      // Reset state
+      arcadeScore = 0;
+      arcadeTime = 30;
+      isArcadeRunning = true;
+      currentSpeed = 6;
+      spawnRate = 1200;
+      document.getElementById('arcade-score').textContent = '0';
+      document.getElementById('arcade-timer').textContent = '30';
+      document.getElementById('arcade-start-overlay').classList.add('hidden');
+      document.getElementById('arcade-game-over').classList.add('hidden');
+      document.getElementById('balloon-canvas').innerHTML = '';
+      
+      // Setup Mine
+      document.getElementById('mine-btn').classList.remove('hidden');
+
+      // Start Loops
+      arcadeTimerInterval = setInterval(updateArcadeTimer, 1000);
+      spawnInterval = setTimeout(spawnLoop, spawnRate);
+    }
+
+    function updateArcadeTimer() {
+      arcadeTime--;
+      document.getElementById('arcade-timer').textContent = arcadeTime;
+      
+      // Speed up every 5 seconds (except at start)
+      if (arcadeTime < 30 && arcadeTime % 5 === 0) {
+        currentSpeed = Math.max(2, currentSpeed - 0.5);
+        spawnRate = Math.max(400, spawnRate - 100);
+      }
+
+      if (arcadeTime <= 0) {
+        endArcadeGame();
+      }
+    }
+
+    function spawnLoop() {
+      if (!isArcadeRunning) return;
+      spawnBalloon();
+      spawnInterval = setTimeout(spawnLoop, spawnRate);
+    }
+
+    const balloonContent = [
+      { text: "Main Idea", type: "main", color: "#8b5cf6" },
+      { text: "Beginning, Middle, End", type: "main", color: "#6366f1" },
+      { text: "Accurate Facts", type: "main", color: "#3b82f6" },
+      { text: "The Big Picture", type: "main", color: "#2563eb" },
+      { text: "Squirrel detail", type: "detail", color: "#f59e0b" },
+      { text: "Tiny leaf color", type: "detail", color: "#d97706" },
+      { text: "Insignificant fact", type: "detail", color: "#b45309" },
+      { text: "Wrong date", type: "detail", color: "#ef4444" }
+    ];
+
+    function spawnBalloon() {
+      const canvas = document.getElementById('balloon-canvas');
+      const content = balloonContent[Math.floor(Math.random() * balloonContent.length)];
+      
+      const balloon = document.createElement('div');
+      balloon.className = 'balloon floating-balloon';
+      balloon.dataset.type = content.type;
+      balloon.style.backgroundColor = content.color;
+      balloon.style.left = Math.random() * (canvas.clientWidth - 80) + 'px';
+      
+      const duration = currentSpeed + (Math.random() * 2);
+      balloon.style.setProperty('--duration', `${duration}s`);
+      
+      balloon.innerHTML = `<span>${content.text}</span>`;
+      
+      canvas.appendChild(balloon);
+
+      balloon.onclick = (e) => popBalloon(balloon, content, e);
+
+      // Remove after duration
+      setTimeout(() => {
+        if (balloon.parentNode) balloon.remove();
+      }, duration * 1000);
+    }
+
+    function popBalloon(balloon, content, event) {
+      if (!isArcadeRunning) return;
+      
+      if (hasGoldenNeedle) {
+        // Pop nearby balloons
+        const rect = balloon.getBoundingClientRect();
+        const canvas = document.getElementById('balloon-canvas');
+        const balloons = canvas.querySelectorAll('.balloon');
+        balloons.forEach(b => {
+          const bRect = b.getBoundingClientRect();
+          const dist = Math.sqrt(Math.pow(rect.x - bRect.x, 2) + Math.pow(rect.y - bRect.y, 2));
+          if (dist < 150) {
+             performPop(b);
+          }
+        });
+      } else {
+        performPop(balloon, content);
+      }
+    }
+
+    function performPop(balloon, content) {
+      if (balloon.classList.contains('balloon-pop')) return;
+      
+      balloon.classList.add('balloon-pop');
+      
+      // If no content provided, try to find it from data attribute
+      if (!content && balloon.dataset.type) {
+        content = { type: balloon.dataset.type };
+      }
+
+      if (content && content.type === 'detail') {
+        arcadeScore = Math.max(0, arcadeScore - 1);
+        balloon.innerHTML = '<span>❌</span>';
+      } else {
+        arcadeScore++;
+        balloon.innerHTML = '<span>✅</span>';
+      }
+      
+      document.getElementById('arcade-score').textContent = arcadeScore;
+      
+      // Visual feedback
+      const burst = document.createElement('div');
+      burst.className = 'absolute text-2xl pointer-events-none';
+      burst.innerHTML = '💥';
+      burst.style.left = balloon.style.left;
+      burst.style.bottom = balloon.style.bottom;
+      document.getElementById('balloon-canvas').appendChild(burst);
+      setTimeout(() => burst.remove(), 500);
+
+      setTimeout(() => balloon.remove(), 300);
+    }
+
+    function buyGoldenNeedle() {
+      if (hasGoldenNeedle) return;
+      if (coins < 20) {
+        showDetectiveFeedback("You need 20 gold for the Golden Needle!", "incorrect");
+        return;
+      }
+      coins -= 20;
+      hasGoldenNeedle = true;
+      updateCoinDisplay();
+      document.getElementById('buy-needle-btn').innerHTML = '<span>📍</span> Needle ACTIVE!';
+      document.getElementById('buy-needle-btn').classList.add('bg-green-400');
+    }
+
+    function useBalloonMine() {
+      if (!isArcadeRunning) return;
+      
+      const balloons = document.querySelectorAll('.balloon');
+      balloons.forEach(b => {
+        if (b.dataset.type === 'detail') {
+          // Explode details without penalty
+          if (b.classList.contains('balloon-pop')) return;
+          b.classList.add('balloon-pop');
+          b.innerHTML = '<span>❌</span>';
+          setTimeout(() => b.remove(), 300);
+        } else {
+          performPop(b);
+        }
+      });
+      
+      document.getElementById('mine-btn').classList.add('hidden');
+      
+      // Explosion effect
+      const explosion = document.createElement('div');
+      explosion.className = 'absolute inset-0 bg-white/50 animate-pulse pointer-events-none z-40';
+      document.getElementById('arcade-container').appendChild(explosion);
+      setTimeout(() => explosion.remove(), 500);
+    }
+
+    function endArcadeGame() {
+      isArcadeRunning = false;
+      clearInterval(arcadeTimerInterval);
+      clearTimeout(spawnInterval);
+      
+      document.getElementById('arcade-game-over').classList.remove('hidden');
+      document.getElementById('arcade-final-score').textContent = arcadeScore;
+      
+      // Reward some coins based on performance?
+      // "Every time they answer correctly they earn coins"
+      // Maybe give 1 gold per 2 balloons popped?
+      const bonus = Math.floor(arcadeScore / 2);
+      if (bonus > 0) {
+        setTimeout(() => addCoins(bonus), 1000);
+      }
+    }
+
+    function resetArcade() {
+      document.getElementById('arcade-game-over').classList.add('hidden');
+      document.getElementById('arcade-start-overlay').classList.remove('hidden');
+      document.getElementById('balloon-canvas').innerHTML = '';
+      hasGoldenNeedle = false;
+      document.getElementById('buy-needle-btn').innerHTML = '<span>📍</span> Golden Needle (20 💰)';
+      document.getElementById('buy-needle-btn').classList.remove('bg-green-400');
+    }
+
+    // Initialize
+    renderBricks();
+
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange: async (config) => {
+          applyConfig(config);
+        },
+        mapToCapabilities: (config) => ({
+          recolorables: [],
+          borderables: [],
+          fontEditable: undefined,
+          fontSizeable: undefined
+        }),
+        mapToEditPanelValues: (config) => new Map([
+          ["game_title", config.game_title || defaultConfig.game_title],
+          ["instruction_text", config.instruction_text || defaultConfig.instruction_text]
+        ])
+      });
+    }
+  </script>
+ </body>
+</html>
