@@ -619,6 +619,45 @@
       0% { transform: scale(0); opacity: 0; }
       100% { transform: scale(1); opacity: 1; }
     }
+
+    /* NEW ANIMATIONS */
+    @keyframes floatUp {
+      0% { transform: translateY(0); opacity: 1; }
+      100% { transform: translateY(-50px); opacity: 0; }
+    }
+    .float-score {
+      position: absolute;
+      font-weight: bold;
+      font-size: 1.5rem;
+      pointer-events: none;
+      animation: floatUp 1s ease-out forwards;
+      z-index: 50;
+    }
+    .float-score.plus { color: #10b981; }
+    .float-score.minus { color: #ef4444; }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+      20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+    .shake-screen {
+      animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+    }
+
+    .combo-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 3rem;
+      font-weight: 900;
+      color: #fbbf24;
+      text-shadow: 2px 2px 0 #000;
+      z-index: 60;
+      animation: popIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      pointer-events: none;
+    }
   </style>
   <style>@view-transition { navigation: auto; }</style>
   <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
@@ -807,7 +846,7 @@
       <div class="inline-flex items-center gap-3 mb-2"><span class="text-4xl">🎈</span>
        <h1 class="text-3xl font-extrabold bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-400 bg-clip-text text-transparent">The Golden Arcade</h1><span class="text-4xl">🎯</span>
       </div>
-      <p class="text-gray-600 text-lg">Pop the "Main Ideas" but avoid the "Insignificant Details"!</p>
+      <p class="text-gray-600 text-lg">Pop the balloons that help you make a good summary! Avoid the balloons that show what you DON'T want in a summary, like tiny details or fake facts.</p>
      </div>
 
      <!-- Arcade Game Area -->
@@ -825,9 +864,6 @@
       <div class="absolute top-4 left-4 z-40 flex flex-col gap-2">
        <button id="buy-needle-btn" onclick="buyGoldenNeedle()" class="px-4 py-2 bg-yellow-400 text-amber-900 font-bold rounded-xl shadow-md border-b-4 border-yellow-600 hover:scale-105 transition-transform flex items-center gap-2">
         <span>📍</span> Golden Needle (20 💰)
-       </button>
-       <button id="mine-btn" onclick="useBalloonMine()" class="hidden px-4 py-2 bg-red-500 text-white font-bold rounded-xl shadow-md border-b-4 border-red-700 hover:scale-105 transition-transform flex items-center gap-2">
-        <span>💣</span> Balloon Mine!
        </button>
       </div>
 
@@ -922,6 +958,11 @@
 
     // Global State
     let coins = 0;
+
+    // Bonus Round State
+    let isBonusRound = false;
+    let nextPageAfterBonus = 1;
+    let comboCount = 0;
 
     // Detective game state
     let detectedRedFlags = new Set();
@@ -1124,6 +1165,15 @@
       if (placedCards.size === sortingData.length) {
         document.getElementById('sort-complete').classList.remove('hidden');
         document.getElementById('cards-container').classList.add('hidden');
+
+        const completeMsg = document.getElementById('sort-complete');
+        if(!completeMsg.querySelector('button')) {
+            const bonusBtn = document.createElement('button');
+            bonusBtn.className = "mt-4 block mx-auto px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-full shadow-lg hover:scale-105 transition-transform animate-bounce";
+            bonusBtn.innerHTML = "🎁 Play Bonus Round";
+            bonusBtn.onclick = () => startBonusRound(4);
+            completeMsg.appendChild(bonusBtn);
+        }
       }
     }
 
@@ -1285,6 +1335,12 @@
       
       if (correctCount === 3 && incorrectCount === 0) {
         showFeedback("🎉 Perfect! You identified all the main ideas!", "success");
+        const feedback = document.getElementById('feedback');
+        const bonusBtn = document.createElement('button');
+        bonusBtn.className = "mt-4 px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-full shadow-lg hover:scale-105 transition-transform animate-bounce";
+        bonusBtn.innerHTML = "🎁 Play Bonus Round";
+        bonusBtn.onclick = () => startBonusRound(2);
+        feedback.appendChild(bonusBtn);
         createConfetti();
       } else if (correctCount === 3) {
         showFeedback("👍 Great job finding the main ideas! But you included some minor details too.", "partial");
@@ -1416,6 +1472,14 @@
           updateEliminationPrompt();
         } else if (eliminationStep === 3) {
           showEliminationFeedback('🎉 You eliminated all the bad summaries! Option A is the best summary!', 'perfect');
+
+          const feedback = document.getElementById('elimination-feedback');
+          const bonusBtn = document.createElement('button');
+          bonusBtn.className = "mt-4 block mx-auto px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-full shadow-lg hover:scale-105 transition-transform animate-bounce";
+          bonusBtn.innerHTML = "🎁 Play Bonus Round";
+          bonusBtn.onclick = () => startBonusRound(3);
+          feedback.appendChild(bonusBtn);
+
           highlightCorrectAnswer();
           eliminationComplete = true;
           createConfetti();
@@ -1719,6 +1783,49 @@
       renderDetectiveGame();
     }
 
+    // --- HELPER FUNCTIONS ---
+    function startBonusRound(nextPage) {
+      isBonusRound = true;
+      nextPageAfterBonus = nextPage;
+      goToPage(5);
+    }
+
+    function triggerShake() {
+      const container = document.getElementById('arcade-container');
+      container.classList.remove('shake-screen');
+      void container.offsetWidth; // Force reflow
+      container.classList.add('shake-screen');
+      setTimeout(() => container.classList.remove('shake-screen'), 500);
+    }
+
+    function showFloatingScore(element, amount) {
+      const rect = element.getBoundingClientRect();
+      const container = document.getElementById('balloon-canvas');
+      const containerRect = container.getBoundingClientRect();
+
+      const score = document.createElement('div');
+      score.className = `float-score ${amount > 0 ? 'plus' : 'minus'}`;
+      score.innerText = amount > 0 ? `+${amount}` : amount;
+
+      score.style.left = (rect.left - containerRect.left + 20) + 'px';
+      score.style.top = (rect.top - containerRect.top) + 'px';
+
+      container.appendChild(score);
+      setTimeout(() => score.remove(), 1000);
+    }
+
+    function triggerCombo() {
+      const container = document.getElementById('arcade-container');
+      const comboMsg = document.createElement('div');
+      comboMsg.className = 'combo-text';
+      comboMsg.innerHTML = 'COMBO! 🌟<br><span style="font-size:1.5rem; display:block; text-align:center;">+10 Coins</span>';
+      container.appendChild(comboMsg);
+
+      addCoins(10);
+
+      setTimeout(() => comboMsg.remove(), 1000);
+    }
+
     // --- ARCADE LOGIC ---
     let arcadeScore = 0;
     let arcadeTime = 30;
@@ -1729,33 +1836,35 @@
     let arcadeTimerInterval;
     let spawnInterval;
     let arcadeCoinsEarned = 0;
+    let minesSpawned = 0;
 
     function startArcadeGame() {
       if (isArcadeRunning) return;
       
-      // Pay to play
-      if (coins < 10) {
-        showDetectiveFeedback("You need 10 gold to play!", "incorrect");
-        return;
+      // Pay to play (unless bonus round)
+      if (!isBonusRound) {
+        if (coins < 10) {
+            showDetectiveFeedback("You need 10 gold to play!", "incorrect");
+            return;
+        }
+        coins -= 10;
+        updateCoinDisplay();
       }
-      coins -= 10;
-      updateCoinDisplay();
 
       // Reset state
       arcadeScore = 0;
       arcadeTime = 30;
+      minesSpawned = 0;
       isArcadeRunning = true;
       currentSpeed = 6;
       spawnRate = 1200;
       document.getElementById('arcade-score').textContent = '0';
       document.getElementById('arcade-timer').textContent = '30';
+      document.getElementById('arcade-timer').parentElement.classList.remove('animate-pulse', 'text-red-600');
       document.getElementById('arcade-start-overlay').classList.add('hidden');
       document.getElementById('arcade-game-over').classList.add('hidden');
       document.getElementById('balloon-canvas').innerHTML = '';
       
-      // Setup Mine
-      document.getElementById('mine-btn').classList.remove('hidden');
-
       // Start Loops
       arcadeTimerInterval = setInterval(updateArcadeTimer, 1000);
       spawnInterval = setTimeout(spawnLoop, spawnRate);
@@ -1771,6 +1880,12 @@
         spawnRate = Math.max(400, spawnRate - 100);
       }
 
+      // Screen shake on last 5 seconds
+      if (arcadeTime <= 5 && arcadeTime > 0) {
+        triggerShake();
+        document.getElementById('arcade-timer').parentElement.classList.add('animate-pulse', 'text-red-600');
+      }
+
       if (arcadeTime <= 0) {
         endArcadeGame();
       }
@@ -1784,17 +1899,25 @@
 
     const balloonContent = [
       { text: "Main Idea", type: "main", color: "#8b5cf6" },
-      { text: "Beginning, Middle, End", type: "main", color: "#6366f1" },
+      { text: "Beginning, Middle, & End", type: "main", color: "#6366f1" },
       { text: "Accurate Facts", type: "main", color: "#3b82f6" },
-      { text: "The Big Picture", type: "main", color: "#2563eb" },
-      { text: "Squirrel detail", type: "detail", color: "#f59e0b" },
-      { text: "Tiny leaf color", type: "detail", color: "#d97706" },
-      { text: "Insignificant fact", type: "detail", color: "#b45309" },
-      { text: "Wrong date", type: "detail", color: "#ef4444" }
+      { text: "Key Events", type: "main", color: "#2563eb" },
+      { text: "Insignificant Detail", type: "detail", color: "#f59e0b" },
+      { text: "Fake Information", type: "detail", color: "#d97706" },
+      { text: "Out of Order", type: "detail", color: "#b45309" },
+      { text: "Tiny Side Note", type: "detail", color: "#ef4444" }
     ];
 
     function spawnBalloon() {
       const canvas = document.getElementById('balloon-canvas');
+
+      // Mine spawning logic (max 2 per round)
+      if (minesSpawned < 2 && Math.random() < 0.1) {
+          spawnMine(canvas);
+          minesSpawned++;
+          return;
+      }
+
       const content = balloonContent[Math.floor(Math.random() * balloonContent.length)];
       
       const balloon = document.createElement('div');
@@ -1816,6 +1939,59 @@
       setTimeout(() => {
         if (balloon.parentNode) balloon.remove();
       }, duration * 1000);
+    }
+
+    function spawnMine(canvas) {
+      const mine = document.createElement('div');
+      mine.className = 'balloon floating-balloon';
+      mine.dataset.type = 'mine';
+      mine.style.backgroundColor = '#ef4444'; // Red-ish base, but we will style it
+      mine.style.background = 'radial-gradient(circle at 30% 30%, #52525b, #000)'; // Black bomb
+      mine.style.left = Math.random() * (canvas.clientWidth - 80) + 'px';
+      mine.style.fontSize = '3rem';
+
+      const duration = currentSpeed + 1; // Slightly slower maybe? or same
+      mine.style.setProperty('--duration', `${duration}s`);
+
+      mine.innerHTML = '<span>💣</span>';
+
+      canvas.appendChild(mine);
+
+      mine.onclick = (e) => popMine(mine, e);
+
+      setTimeout(() => {
+        if (mine.parentNode) mine.remove();
+      }, duration * 1000);
+    }
+
+    function popMine(mine, event) {
+        if (!isArcadeRunning) return;
+        if (mine.classList.contains('balloon-pop')) return;
+
+        mine.classList.add('balloon-pop');
+
+        // Explosion effect
+        triggerShake();
+        const explosion = document.createElement('div');
+        explosion.className = 'absolute inset-0 bg-white/50 animate-pulse pointer-events-none z-40';
+        document.getElementById('arcade-container').appendChild(explosion);
+        setTimeout(() => explosion.remove(), 500);
+
+        // Pop all balloons
+        const balloons = document.querySelectorAll('.balloon:not(.balloon-pop)');
+        balloons.forEach(b => {
+            if (b === mine) return;
+            // Grant +1 for everything as per requirement "awarding points for each"
+            // We simulate a "Good" pop manually
+            b.classList.add('balloon-pop');
+            b.innerHTML = '<span>✅</span>';
+            arcadeScore++;
+            showFloatingScore(b, 1);
+            setTimeout(() => b.remove(), 300);
+        });
+
+        document.getElementById('arcade-score').textContent = arcadeScore;
+        setTimeout(() => mine.remove(), 300);
     }
 
     function popBalloon(balloon, content, event) {
@@ -1851,9 +2027,19 @@
       if (content && content.type === 'detail') {
         arcadeScore = Math.max(0, arcadeScore - 1);
         balloon.innerHTML = '<span>❌</span>';
+
+        showFloatingScore(balloon, -1);
+        comboCount = 0;
+        triggerShake();
       } else {
         arcadeScore++;
         balloon.innerHTML = '<span>✅</span>';
+
+        showFloatingScore(balloon, 1);
+        comboCount++;
+        if (comboCount % 5 === 0) {
+          triggerCombo();
+        }
       }
       
       document.getElementById('arcade-score').textContent = arcadeScore;
@@ -1913,16 +2099,34 @@
       clearInterval(arcadeTimerInterval);
       clearTimeout(spawnInterval);
       
-      document.getElementById('arcade-game-over').classList.remove('hidden');
+      const gameOver = document.getElementById('arcade-game-over');
+      gameOver.classList.remove('hidden');
       document.getElementById('arcade-final-score').textContent = arcadeScore;
       
-      // Reward some coins based on performance?
-      // "Every time they answer correctly they earn coins"
-      // Maybe give 1 gold per 2 balloons popped?
+      // Bonus Round Logic
+      const actionBtn = gameOver.querySelector('button');
+      if (isBonusRound) {
+        actionBtn.innerHTML = "Next Challenge ➡️";
+        actionBtn.onclick = finishBonusRound;
+        actionBtn.classList.remove('from-purple-500', 'to-indigo-600');
+        actionBtn.classList.add('from-green-500', 'to-emerald-600');
+      } else {
+        actionBtn.innerHTML = "Play Again (10 💰)";
+        actionBtn.onclick = resetArcade;
+        actionBtn.classList.add('from-purple-500', 'to-indigo-600');
+        actionBtn.classList.remove('from-green-500', 'to-emerald-600');
+      }
+
       const bonus = Math.floor(arcadeScore / 2);
       if (bonus > 0) {
         setTimeout(() => addCoins(bonus), 1000);
       }
+    }
+
+    function finishBonusRound() {
+      resetArcade();
+      isBonusRound = false;
+      goToPage(nextPageAfterBonus);
     }
 
     function resetArcade() {
