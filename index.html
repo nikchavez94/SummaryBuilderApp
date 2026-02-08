@@ -846,8 +846,10 @@
       <div class="inline-flex items-center gap-3 mb-2"><span class="text-4xl">🎈</span>
        <h1 class="text-3xl font-extrabold bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-400 bg-clip-text text-transparent">The Golden Arcade</h1><span class="text-4xl">🎯</span>
       </div>
-      <p class="text-gray-600 text-lg">Pop the balloons that help you make a good summary! Avoid the balloons that show what you DON'T want in a summary, like tiny details or fake facts.</p>
-     </div>
+  <p class="text-gray-600 text-2xl font-semibold leading-relaxed max-w-3xl mx-auto">
+    Pop the balloons that help you make a good summary! Avoid the balloons that show what you DON'T want in a summary, like tiny details or fake facts.
+  </p>
+</div>
 
      <!-- Arcade Game Area -->
      <div id="arcade-container" class="relative w-full h-[500px] bg-sky-100 rounded-3xl border-4 border-sky-300 overflow-hidden shadow-inner mb-6">
@@ -963,6 +965,7 @@
     let isBonusRound = false;
     let nextPageAfterBonus = 1;
     let comboCount = 0;
+    let minesSpawned = 0;
 
     // Detective game state
     let detectedRedFlags = new Set();
@@ -1836,12 +1839,11 @@
     let arcadeTimerInterval;
     let spawnInterval;
     let arcadeCoinsEarned = 0;
-    let minesSpawned = 0;
 
     function startArcadeGame() {
       if (isArcadeRunning) return;
       
-      // Pay to play (unless bonus round)
+      // Pay to play
       if (!isBonusRound) {
         if (coins < 10) {
             showDetectiveFeedback("You need 10 gold to play!", "incorrect");
@@ -1864,7 +1866,7 @@
       document.getElementById('arcade-start-overlay').classList.add('hidden');
       document.getElementById('arcade-game-over').classList.add('hidden');
       document.getElementById('balloon-canvas').innerHTML = '';
-      
+
       // Start Loops
       arcadeTimerInterval = setInterval(updateArcadeTimer, 1000);
       spawnInterval = setTimeout(spawnLoop, spawnRate);
@@ -2069,30 +2071,7 @@
       document.getElementById('buy-needle-btn').classList.add('bg-green-400');
     }
 
-    function useBalloonMine() {
-      if (!isArcadeRunning) return;
-      
-      const balloons = document.querySelectorAll('.balloon');
-      balloons.forEach(b => {
-        if (b.dataset.type === 'detail') {
-          // Explode details without penalty
-          if (b.classList.contains('balloon-pop')) return;
-          b.classList.add('balloon-pop');
-          b.innerHTML = '<span>❌</span>';
-          setTimeout(() => b.remove(), 300);
-        } else {
-          performPop(b);
-        }
-      });
-      
-      document.getElementById('mine-btn').classList.add('hidden');
-      
-      // Explosion effect
-      const explosion = document.createElement('div');
-      explosion.className = 'absolute inset-0 bg-white/50 animate-pulse pointer-events-none z-40';
-      document.getElementById('arcade-container').appendChild(explosion);
-      setTimeout(() => explosion.remove(), 500);
-    }
+    // Removed useBalloonMine as it's replaced by floating mines
 
     function endArcadeGame() {
       isArcadeRunning = false;
