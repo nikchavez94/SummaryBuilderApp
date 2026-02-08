@@ -689,7 +689,7 @@
       </div>
      </div><!-- Detail Bricks -->
      <div class="mb-6">
-      <h3 class="font-bold text-gray-700 mb-3 flex items-center gap-2"><span class="text-2xl">🧱</span> Story Details - Click to add to your summary:</h3>
+      <h3 class="font-bold text-gray-700 mb-3 flex items-center gap-2"><span class="text-2xl">🧱</span> Story Details - Click to add to your summary - you may not need to use all boxes:</h3>
       <div id="bricks-container" class="flex flex-wrap gap-3"><!-- Bricks will be rendered here -->
       </div>
      </div><!-- Summary Box -->
@@ -809,21 +809,30 @@
       <div class="perfect-summary-title"><span>🌟</span> Perfect Summary
       </div>
       <div class="perfect-summary-text">
-       Maya found an ancient brass key with mysterious symbols in the woods behind her grandmother's house and decided to show it to her grandmother.
-      </div>
+A perfect summary is a concise overview that identifies the main idea and captures the most essential supporting details from the beginning, middle, and end of the text, while maintaining the correct logical order of events.      </div>
      </div><!-- Verify Instructions -->
      <div class="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 mb-6">
-      <p class="text-gray-700 font-semibold mb-2">👇 Drag the snippets to prove this summary covers the whole story from start to finish.</p>
-      <p class="text-gray-600 text-sm">Match the Beginning, Middle, and End to verify your answer and collect your reward!</p>
-     </div><!-- Snippet Cards (to drag) -->
+  <div class="inline-block px-3 py-1 mb-2 bg-blue-600 text-white text-xs font-bold rounded-full uppercase tracking-wider">Part A: Verify the Evidence</div>
+  <p class="text-gray-700 font-semibold mb-2">Drag the snippets below to prove this summary covers the beginning, middle, and end.</p>
+</div>
+     <!-- Snippet Cards (to drag) -->
      <div id="detective-snippets" class="mb-6"><!-- Snippet cards will be rendered here -->
      </div><!-- Verify Zones -->
      <div id="verify-zones" class="verify-zones-container"><!-- Verify zones will be rendered here -->
      </div><!-- Detective Feedback -->
+     <!-- VISUAL DIVIDER -->
+<div class="relative flex py-10 items-center">
+  <div class="flex-grow border-t-4 border-dashed border-amber-300"></div>
+  <span class="flex-shrink mx-4 px-6 py-2 rounded-full bg-amber-100 border-2 border-amber-400 text-amber-700 font-black uppercase tracking-widest text-sm shadow-sm">
+    Part B: Catch the Errors
+  </span>
+  <div class="flex-grow border-t-4 border-dashed border-amber-300"></div>
+</div>
      <div id="detective-feedback" class="hidden text-center p-4 rounded-2xl mb-4"></div><!-- Trick Summaries -->
      <div class="trick-summaries-container">
-      <h3 class="font-bold text-gray-700 mb-4 text-lg flex items-center gap-2"><span class="text-2xl">🚩</span> Now spot the red flags! Click on the errors in these trick summaries:</h3>
-      <div id="trick-summaries" class="mb-6"><!-- Trick summary cards will be rendered here -->
+<h3 class="font-extrabold text-gray-800 mb-6 text-xl flex items-center gap-2">
+  <span class="text-3xl">🚩</span> Use your detective skills to click on the errors in these trick summaries:
+</h3>      <div id="trick-summaries" class="mb-6"><!-- Trick summary cards will be rendered here -->
       </div>
      </div><!-- Detective Complete Message -->
      <div id="detective-complete" class="hidden detective-complete">
@@ -880,7 +889,17 @@
       <div id="arcade-start-overlay" class="absolute inset-0 z-30 flex items-center justify-center">
         <button onclick="startArcadeGame()" class="px-10 py-5 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-2xl font-black rounded-full shadow-2xl hover:scale-110 transition-transform animate-bounce"> START GAME! </button>
       </div>
-      
+      <!-- Instruction Flash Overlay -->
+<div id="arcade-instructions-overlay" class="hidden absolute inset-0 z-40 bg-sky-500/90 backdrop-blur-sm flex items-center justify-center p-8 text-center">
+  <div class="animate-bounce">
+    <h2 class="text-4xl font-black text-white mb-4">GET READY!</h2>
+    <p class="text-2xl text-sky-100 font-bold leading-tight">
+      Pop the <span class="text-green-300">GOOD</span> summary balloons!<br>
+      Avoid the <span class="text-red-300">BAD</span> detail balloons!
+    </p>
+    <div id="arcade-countdown" class="text-6xl font-black text-white mt-6">10</div>
+  </div>
+</div>
       <!-- Balloon Container -->
       <div id="balloon-canvas" class="absolute inset-0"></div>
      </div>
@@ -961,6 +980,7 @@
 
     // Global State
     let coins = 0;
+    let isFinalArcadeMode = false; // Add this line here
     
     // Bonus Round State
     let isBonusRound = false;
@@ -1211,33 +1231,6 @@
 
     let shuffledDetails = shuffleArray(storyDetails);
 
-    // PAGE NAVIGATION
-    function openArcade() {
-      if (coins < 10) {
-        showDetectiveFeedback("You need at least 10 gold to play in the arcade!", "incorrect");
-        return;
-      }
-      goToPage(5);
-    }
-
-    function goToPage(page) {
-      currentPage = page;
-      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-      document.getElementById(`page-${page}`).classList.add('active');
-      
-      document.querySelectorAll('.page-dot').forEach((dot, index) => {
-        dot.classList.toggle('active', index + 1 === page);
-      });
-
-      if (page === 2) {
-        renderEliminationOptions();
-      } else if (page === 3) {
-        renderSortingGame();
-      } else if (page === 4) {
-        renderDetectiveGame();
-      }
-    }
-
     // PAGE 1: SUMMARY BUILDER
     function renderBricks() {
       const container = document.getElementById('bricks-container');
@@ -1321,16 +1314,9 @@
       renderSummary();
     }
 
-    function removeDetail(id) {
-      if (isChecked) return;
-      selectedDetails = selectedDetails.filter(d => d.id !== id);
-      renderBricks();
-      renderSummary();
-    }
-
     function checkAnswers() {
       if (selectedDetails.length === 0) {
-        showFeedback("Please select some details first!", "warning");
+        alert("Please select some details first!");
         return;
       }
       
@@ -1338,22 +1324,27 @@
       renderBricks();
       renderSummary();
       
-      const correctCount = selectedDetails.filter(d => d.isMain).length;
-      const incorrectCount = selectedDetails.filter(d => !d.isMain).length;
+      const correctSelected = selectedDetails.filter(d => d.isMain).length;
+      const incorrectSelected = selectedDetails.filter(d => !d.isMain).length;
+      const totalCorrect = storyDetails.filter(d => d.isMain).length;
       
-      document.getElementById('score').textContent = correctCount;
-      document.getElementById('score-display').classList.remove('hidden');
+      const feedback = document.getElementById('feedback');
+      feedback.classList.remove('hidden');
       
-      if (correctCount > 0) {
-        addCoins(correctCount * 5);
-      }
+      const scoreDisplay = document.getElementById('score-display');
+      scoreDisplay.classList.remove('hidden');
+      document.getElementById('score').textContent = correctSelected;
       
-      if (correctCount === 3 && incorrectCount === 0) {
-        showFeedback("🎉 Perfect! You identified all the main ideas!", "success");
-        const feedback = document.getElementById('feedback');
-        const btnContainer = document.createElement('div');
-        btnContainer.className = "flex flex-col sm:flex-row justify-center gap-4 mt-4";
+      if (correctSelected === totalCorrect && incorrectSelected === 0) {
+        addCoins(10);
+        feedback.className = "text-center p-4 rounded-2xl mb-4 bg-green-100 border-2 border-green-400 text-green-800 font-bold";
+        feedback.innerHTML = "🎉 Excellent! You found all the main ideas and left out the tiny details!";
+        createConfetti();
         
+        // Add Bonus Button & Next Button
+        const btnContainer = document.createElement('div');
+        btnContainer.className = "bonus-container flex flex-col sm:flex-row justify-center gap-4 mt-4";
+
         const bonusBtn = document.createElement('button');
         bonusBtn.className = "px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-full shadow-lg hover:scale-105 transition-transform animate-bounce";
         bonusBtn.innerHTML = "🎁 Play Bonus Round";
@@ -1363,79 +1354,80 @@
         nextBtn.className = "px-6 py-2 bg-gray-500 text-white font-bold rounded-full shadow-lg hover:bg-gray-600 transition-colors";
         nextBtn.innerHTML = "Next Page ➡️";
         nextBtn.onclick = () => goToPage(2);
-        
+
         btnContainer.appendChild(bonusBtn);
         btnContainer.appendChild(nextBtn);
         feedback.appendChild(btnContainer);
-        createConfetti();
-      } else if (correctCount === 3) {
-        showFeedback("👍 Great job finding the main ideas! But you included some minor details too.", "partial");
-      } else if (correctCount >= 2) {
-        showFeedback("👏 Good start! You found some main ideas. Green = main ideas, Red = minor details.", "partial");
+
       } else {
-        showFeedback("😔 Keep practicing! Green shows main ideas, Red shows minor details.", "info");
+        feedback.className = "text-center p-4 rounded-2xl mb-4 bg-yellow-100 border-2 border-yellow-400 text-yellow-800";
+        if (incorrectSelected > 0) {
+          feedback.textContent = "Almost! You included some tiny details that don't belong in a summary. Look for the red boxes.";
+        } else {
+          feedback.textContent = "Good start! But you missed some important main ideas. Look for the green boxes you missed.";
+        }
       }
       
       document.getElementById('check-btn').disabled = true;
     }
 
-    function showFeedback(message, type) {
-      const feedback = document.getElementById('feedback');
-      feedback.classList.remove('hidden');
-      
-      const colors = {
-        success: 'bg-green-100 border-2 border-green-400 text-green-800',
-        warning: 'bg-yellow-100 border-2 border-yellow-400 text-yellow-800',
-        partial: 'bg-blue-100 border-2 border-blue-400 text-blue-800',
-        info: 'bg-purple-100 border-2 border-purple-400 text-purple-800'
-      };
-      
-      feedback.className = `text-center p-4 rounded-2xl mb-4 font-semibold ${colors[type]}`;
-      feedback.textContent = message;
-    }
-
-    function createConfetti() {
-      const colors = ['#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6'];
-      for (let i = 0; i < 50; i++) {
-        const confetti = document.createElement('div');
-        confetti.className = 'confetti';
-        confetti.style.left = Math.random() * 100 + 'vw';
-        confetti.style.top = '-10px';
-        confetti.style.width = '10px';
-        confetti.style.height = '10px';
-        confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
-        confetti.style.borderRadius = Math.random() > 0.5 ? '50%' : '0';
-        confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
-        document.body.appendChild(confetti);
-        
-        const animation = confetti.animate([
-          { top: '-10px', opacity: 1 },
-          { top: '100%', opacity: 0 }
-        ], {
-          duration: 2000 + Math.random() * 1000,
-          easing: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)'
-        });
-        
-        animation.onfinish = () => confetti.remove();
-      }
-    }
-
     function resetGame() {
       selectedDetails = [];
       isChecked = false;
-      shuffledDetails = shuffleArray(storyDetails);
-      
       document.getElementById('feedback').classList.add('hidden');
       document.getElementById('score-display').classList.add('hidden');
       document.getElementById('check-btn').disabled = false;
-      
       renderBricks();
       renderSummary();
     }
 
-    function applyConfig(config) {
-      document.getElementById('game-title').textContent = config.game_title || defaultConfig.game_title;
-      document.getElementById('instruction-text').textContent = config.instruction_text || defaultConfig.instruction_text;
+    function createConfetti() {
+      for (let i = 0; i < 100; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.left = Math.random() * 100 + 'vw';
+        confetti.style.top = -10 + 'px';
+        confetti.style.backgroundColor = ['#f59e0b', '#ec4899', '#3b82f6', '#10b981'][Math.floor(Math.random() * 4)];
+        confetti.style.width = Math.random() * 10 + 5 + 'px';
+        confetti.style.height = Math.random() * 10 + 5 + 'px';
+        confetti.style.animation = `coinRain ${Math.random() * 2 + 1}s linear forwards`;
+        document.body.appendChild(confetti);
+        setTimeout(() => confetti.remove(), 3000);
+      }
+    }
+
+    // PAGE NAVIGATION
+    function openArcade() {
+      if (coins < 10) {
+        showDetectiveFeedback("The final arcade costs 10 gold to enter!", "incorrect");
+        return;
+      }
+      isFinalArcadeMode = true; // Set flag for Page 4 completion
+      goToPage(5);
+    }
+
+    function goToPage(page) {
+      currentPage = page;
+      
+      // Visual page switching
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      document.getElementById(`page-${page}`).classList.add('active');
+      
+      // Update navigation dots
+      document.querySelectorAll('.page-dot').forEach((dot, index) => {
+        dot.classList.toggle('active', index + 1 === page);
+      });
+
+      // Page-specific initializers
+      if (page === 5) {
+        resetArcade(); // Ensure "Start" button shows
+      } else if (page === 2) {
+        renderEliminationOptions();
+      } else if (page === 3) {
+        renderSortingGame();
+      } else if (page === 4) {
+        renderDetectiveGame();
+      }
     }
 
     // PAGE 2: ELIMINATION GAME
@@ -1454,14 +1446,13 @@
         optionCard.onclick = () => handleOptionClick(option);
         
         optionCard.innerHTML = `
-          <div class="flex items-start gap-3">
-            <div class="font-bold text-2xl text-blue-600 mt-2">${option.id}.</div>
-            <div class="flex-1">
-              <p class="text-gray-800 text-lg leading-relaxed mb-2">${option.text}</p>
-            </div>
-            ${isEliminated ? '<div class="red-x">✕</div>' : ''}
-          </div>
-        `;
+  <div class="flex items-start gap-3">
+    <div class="flex-1">
+      <p class="text-gray-800 text-lg leading-relaxed mb-2">${option.text}</p>
+    </div>
+    ${isEliminated ? '<div class="red-x">✕</div>' : ''}
+  </div>
+`;
         
         container.appendChild(optionCard);
       });
@@ -1497,7 +1488,7 @@
           eliminationStep = 3;
           updateEliminationPrompt();
         } else if (eliminationStep === 3) {
-          showEliminationFeedback('🎉 You eliminated all the bad summaries! Option A is the best summary!', 'perfect');
+          showEliminationFeedback('🎉 You eliminated all the bad summaries! The remaining option is the best summary!', 'perfect');
           
           const feedback = document.getElementById('elimination-feedback');
           const btnContainer = document.createElement('div');
@@ -1851,17 +1842,17 @@
       setTimeout(() => score.remove(), 1000);
     }
 
-    function triggerCombo() {
-      const container = document.getElementById('arcade-container');
-      const comboMsg = document.createElement('div');
-      comboMsg.className = 'combo-text';
-      comboMsg.innerHTML = 'COMBO! 🌟<br><span style="font-size:1.5rem; display:block; text-align:center;">+10 Coins</span>';
-      container.appendChild(comboMsg);
-      
-      addCoins(10);
-      
-      setTimeout(() => comboMsg.remove(), 1000);
-    }
+ function triggerCombo() {
+  const container = document.getElementById('arcade-container');
+  const comboMsg = document.createElement('div');
+  comboMsg.className = 'combo-text';
+  comboMsg.innerHTML = 'COMBO! 🌟'; 
+  container.appendChild(comboMsg);
+  
+  addCoins(10);
+  
+  setTimeout(() => comboMsg.remove(), 1000);
+}
 
     // --- ARCADE LOGIC ---
     let arcadeScore = 0;
@@ -1874,36 +1865,109 @@
     let spawnInterval;
     let arcadeCoinsEarned = 0;
 
-    function startArcadeGame() {
+ function startArcadeGame() {
       if (isArcadeRunning) return;
       
-      // Pay to play
+      // 1. Coin/Pay Logic
       if (!isBonusRound) {
-        if (coins < 10) {
-            showDetectiveFeedback("You need 10 gold to play!", "incorrect");
+        const cost = 10; 
+        if (coins < cost) {
+            alert("You need more coins!");
             return;
         }
-        coins -= 10;
+        coins -= cost;
         updateCoinDisplay();
       }
 
-      // Reset state
+      // 2. Hide the Start Button Overlay
+      document.getElementById('arcade-start-overlay').classList.add('hidden');
+      
+      // 3. Show Instructions & Start Countdown
+      const instructionOverlay = document.getElementById('arcade-instructions-overlay');
+      const countdownEl = document.getElementById('arcade-countdown');
+      instructionOverlay.classList.remove('hidden');
+
+      let count = 10; // UPDATED to 10 seconds
+      countdownEl.textContent = count;
+      
+      const countdownInterval = setInterval(() => {
+        count--;
+        if (count > 0) {
+          countdownEl.textContent = count;
+        } else {
+          clearInterval(countdownInterval);
+          instructionOverlay.classList.add('hidden');
+          beginActualGameplay(); // This is the ONLY place this should be called
+        }
+      }, 1000);
+    }
+
+    function beginActualGameplay() {
+      // Initialize game variables
       arcadeScore = 0;
       arcadeTime = 30;
       minesSpawned = 0;
       isArcadeRunning = true;
       currentSpeed = 6;
       spawnRate = 1200;
+      
+      // Update UI
       document.getElementById('arcade-score').textContent = '0';
       document.getElementById('arcade-timer').textContent = '30';
       document.getElementById('arcade-timer').parentElement.classList.remove('animate-pulse', 'text-red-600');
-      document.getElementById('arcade-start-overlay').classList.add('hidden');
       document.getElementById('arcade-game-over').classList.add('hidden');
       document.getElementById('balloon-canvas').innerHTML = '';
 
-      // Start Loops
+      // Start the game loops
       arcadeTimerInterval = setInterval(updateArcadeTimer, 1000);
       spawnInterval = setTimeout(spawnLoop, spawnRate);
+    }
+
+    function endArcadeGame() {
+      isArcadeRunning = false;
+      clearInterval(arcadeTimerInterval);
+      clearTimeout(spawnInterval);
+      
+      const gameOver = document.getElementById('arcade-game-over');
+      gameOver.classList.remove('hidden');
+      document.getElementById('arcade-final-score').textContent = arcadeScore;
+
+      const actionBtn = gameOver.querySelector('button');
+
+      if (isBonusRound) {
+        // Progression for Pages 1, 2, 3
+        actionBtn.innerHTML = "Next Challenge ➡️";
+        actionBtn.onclick = finishBonusRound;
+        actionBtn.classList.remove('from-purple-500', 'to-indigo-600');
+        actionBtn.classList.add('from-green-500', 'to-emerald-600');
+      } else if (isFinalArcadeMode) {
+        // Endless play for Page 4
+        actionBtn.innerHTML = "Play Again (30 💰)";
+        actionBtn.onclick = resetArcade;
+        actionBtn.classList.add('from-purple-500', 'to-indigo-600');
+        actionBtn.classList.remove('from-green-500', 'to-emerald-600');
+      }
+      
+      const bonus = Math.floor(arcadeScore / 2);
+      if (bonus > 0 && !isFinalArcadeMode) {
+        setTimeout(() => addCoins(bonus), 1000);
+      }
+    }
+
+    function finishBonusRound() {
+      resetArcade();
+      isBonusRound = false;
+      goToPage(nextPageAfterBonus);
+    }
+
+    function resetArcade() {
+      document.getElementById('arcade-game-over').classList.add('hidden');
+      document.getElementById('arcade-start-overlay').classList.remove('hidden');
+      document.getElementById('arcade-instructions-overlay').classList.add('hidden');
+      document.getElementById('balloon-canvas').innerHTML = '';
+      hasGoldenNeedle = false;
+      document.getElementById('buy-needle-btn').innerHTML = '<span>📍</span> Golden Needle (20 💰)';
+      document.getElementById('buy-needle-btn').classList.remove('bg-green-400');
     }
 
     function updateArcadeTimer() {
@@ -2103,52 +2167,6 @@
       updateCoinDisplay();
       document.getElementById('buy-needle-btn').innerHTML = '<span>📍</span> Needle ACTIVE!';
       document.getElementById('buy-needle-btn').classList.add('bg-green-400');
-    }
-
-    // Removed useBalloonMine as it's replaced by floating mines
-
-    function endArcadeGame() {
-      isArcadeRunning = false;
-      clearInterval(arcadeTimerInterval);
-      clearTimeout(spawnInterval);
-      
-      const gameOver = document.getElementById('arcade-game-over');
-      gameOver.classList.remove('hidden');
-      document.getElementById('arcade-final-score').textContent = arcadeScore;
-      
-      // Bonus Round Logic
-      const actionBtn = gameOver.querySelector('button');
-      if (isBonusRound) {
-        actionBtn.innerHTML = "Next Challenge ➡️";
-        actionBtn.onclick = finishBonusRound;
-        actionBtn.classList.remove('from-purple-500', 'to-indigo-600');
-        actionBtn.classList.add('from-green-500', 'to-emerald-600');
-      } else {
-        actionBtn.innerHTML = "Play Again (10 💰)";
-        actionBtn.onclick = resetArcade;
-        actionBtn.classList.add('from-purple-500', 'to-indigo-600');
-        actionBtn.classList.remove('from-green-500', 'to-emerald-600');
-      }
-      
-      const bonus = Math.floor(arcadeScore / 2);
-      if (bonus > 0) {
-        setTimeout(() => addCoins(bonus), 1000);
-      }
-    }
-
-    function finishBonusRound() {
-      resetArcade();
-      isBonusRound = false;
-      goToPage(nextPageAfterBonus);
-    }
-
-    function resetArcade() {
-      document.getElementById('arcade-game-over').classList.add('hidden');
-      document.getElementById('arcade-start-overlay').classList.remove('hidden');
-      document.getElementById('balloon-canvas').innerHTML = '';
-      hasGoldenNeedle = false;
-      document.getElementById('buy-needle-btn').innerHTML = '<span>📍</span> Golden Needle (20 💰)';
-      document.getElementById('buy-needle-btn').classList.remove('bg-green-400');
     }
 
     // Initialize
