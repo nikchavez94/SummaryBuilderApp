@@ -1885,30 +1885,7 @@
       document.getElementById('buy-needle-btn').classList.add('bg-green-400');
     }
 
-    function useBalloonMine() {
-      if (!isArcadeRunning) return;
-      
-      const balloons = document.querySelectorAll('.balloon');
-      balloons.forEach(b => {
-        if (b.dataset.type === 'detail') {
-          // Explode details without penalty
-          if (b.classList.contains('balloon-pop')) return;
-          b.classList.add('balloon-pop');
-          b.innerHTML = '<span>❌</span>';
-          setTimeout(() => b.remove(), 300);
-        } else {
-          performPop(b);
-        }
-      });
-      
-      document.getElementById('mine-btn').classList.add('hidden');
-      
-      // Explosion effect
-      const explosion = document.createElement('div');
-      explosion.className = 'absolute inset-0 bg-white/50 animate-pulse pointer-events-none z-40';
-      document.getElementById('arcade-container').appendChild(explosion);
-      setTimeout(() => explosion.remove(), 500);
-    }
+    // Removed useBalloonMine as it's replaced by floating mines
 
     function endArcadeGame() {
       isArcadeRunning = false;
