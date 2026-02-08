@@ -1170,12 +1170,23 @@
         document.getElementById('cards-container').classList.add('hidden');
 
         const completeMsg = document.getElementById('sort-complete');
-        if(!completeMsg.querySelector('button')) {
+        if(!completeMsg.querySelector('.bonus-container')) {
+            const btnContainer = document.createElement('div');
+            btnContainer.className = "bonus-container flex flex-col sm:flex-row justify-center gap-4 mt-4";
+
             const bonusBtn = document.createElement('button');
-            bonusBtn.className = "mt-4 block mx-auto px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-full shadow-lg hover:scale-105 transition-transform animate-bounce";
+            bonusBtn.className = "px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-full shadow-lg hover:scale-105 transition-transform animate-bounce";
             bonusBtn.innerHTML = "🎁 Play Bonus Round";
             bonusBtn.onclick = () => startBonusRound(4);
-            completeMsg.appendChild(bonusBtn);
+
+            const nextBtn = document.createElement('button');
+            nextBtn.className = "px-6 py-2 bg-gray-500 text-white font-bold rounded-full shadow-lg hover:bg-gray-600 transition-colors";
+            nextBtn.innerHTML = "Next Page ➡️";
+            nextBtn.onclick = () => goToPage(4);
+
+            btnContainer.appendChild(bonusBtn);
+            btnContainer.appendChild(nextBtn);
+            completeMsg.appendChild(btnContainer);
         }
       }
     }
@@ -1339,11 +1350,22 @@
       if (correctCount === 3 && incorrectCount === 0) {
         showFeedback("🎉 Perfect! You identified all the main ideas!", "success");
         const feedback = document.getElementById('feedback');
+        const btnContainer = document.createElement('div');
+        btnContainer.className = "flex flex-col sm:flex-row justify-center gap-4 mt-4";
+
         const bonusBtn = document.createElement('button');
-        bonusBtn.className = "mt-4 px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-full shadow-lg hover:scale-105 transition-transform animate-bounce";
+        bonusBtn.className = "px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-full shadow-lg hover:scale-105 transition-transform animate-bounce";
         bonusBtn.innerHTML = "🎁 Play Bonus Round";
         bonusBtn.onclick = () => startBonusRound(2);
-        feedback.appendChild(bonusBtn);
+
+        const nextBtn = document.createElement('button');
+        nextBtn.className = "px-6 py-2 bg-gray-500 text-white font-bold rounded-full shadow-lg hover:bg-gray-600 transition-colors";
+        nextBtn.innerHTML = "Next Page ➡️";
+        nextBtn.onclick = () => goToPage(2);
+
+        btnContainer.appendChild(bonusBtn);
+        btnContainer.appendChild(nextBtn);
+        feedback.appendChild(btnContainer);
         createConfetti();
       } else if (correctCount === 3) {
         showFeedback("👍 Great job finding the main ideas! But you included some minor details too.", "partial");
@@ -1477,11 +1499,22 @@
           showEliminationFeedback('🎉 You eliminated all the bad summaries! Option A is the best summary!', 'perfect');
 
           const feedback = document.getElementById('elimination-feedback');
+          const btnContainer = document.createElement('div');
+          btnContainer.className = "flex flex-col sm:flex-row justify-center gap-4 mt-4";
+
           const bonusBtn = document.createElement('button');
-          bonusBtn.className = "mt-4 block mx-auto px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-full shadow-lg hover:scale-105 transition-transform animate-bounce";
+          bonusBtn.className = "px-6 py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-full shadow-lg hover:scale-105 transition-transform animate-bounce";
           bonusBtn.innerHTML = "🎁 Play Bonus Round";
           bonusBtn.onclick = () => startBonusRound(3);
-          feedback.appendChild(bonusBtn);
+
+          const nextBtn = document.createElement('button');
+          nextBtn.className = "px-6 py-2 bg-gray-500 text-white font-bold rounded-full shadow-lg hover:bg-gray-600 transition-colors";
+          nextBtn.innerHTML = "Next Page ➡️";
+          nextBtn.onclick = () => goToPage(3);
+
+          btnContainer.appendChild(bonusBtn);
+          btnContainer.appendChild(nextBtn);
+          feedback.appendChild(btnContainer);
 
           highlightCorrectAnswer();
           eliminationComplete = true;
