@@ -1287,7 +1287,7 @@ A perfect summary is a concise overview that identifies the main idea and captur
           item.setAttribute('data-id', detail.id);
           item.innerHTML = `
             ${detail.text}
-            ${!isChecked ? `<button onclick="removeDetail(${detail.id})" class="text-blue-400 hover:text-blue-600 ml-1">✕</button>` : ''}
+            ${!isChecked ? `<button onclick="event.stopPropagation(); removeDetail(${detail.id})" class="text-blue-400 hover:text-blue-600 ml-1">✕</button>` : ''}
           `;
           container.appendChild(item);
         } else if (isChecked) {
@@ -1298,6 +1298,18 @@ A perfect summary is a concise overview that identifies the main idea and captur
           }
         }
       });
+    }
+
+    function removeDetail(id) {
+      if (isChecked) return;
+
+      const index = selectedDetails.findIndex(d => d.id === id);
+      if (index !== -1) {
+        selectedDetails.splice(index, 1);
+      }
+
+      renderBricks();
+      renderSummary();
     }
 
     function toggleDetail(detail) {
